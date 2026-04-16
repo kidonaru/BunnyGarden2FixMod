@@ -3,12 +3,13 @@
 [バニーガーデン2](https://store.steampowered.com/app/3443820/2/)(海外名:Bunny Garden2)用の解像度修正やフレームレート上限変更などを行うBepInEx5用Modです。
 <img width="3839" height="2159" alt="image" src="https://github.com/user-attachments/assets/b4e45f40-5420-4811-8500-4a0c3b4d1e69" />
 
-## 対応バージョン(v1.0.0現在)
+## 対応バージョン(v1.0.1現在)
 - ゲームバージョン1.0.1のみ対応  
 
 ## 機能
 - 内部解像度を指定することで画質を向上することができる。
 - 本来は60で固定されていたフレームレート制限を任意の値にするか、取り払うことができる。
+- アンチエイリアスを設定し、さらに画像のガビガビ感(ジャギー)を減らすことができる。  
 
 ## 導入方法
 1. [Releases](https://github.com/kazumasa200/BunnyGarden2FixMod/releases)から最新のzipファイルをダウンロードする。(BunnyGarden2FixMod v1.0.0.zipみたいな感じ)ブラウザによってはブロックするかもしれないので注意。<br>導入時の最新バージョンを入れてください。
