@@ -1,16 +1,22 @@
 # BunnyGarden2FixMod
 
 [バニーガーデン2](https://store.steampowered.com/app/3443820/2/)(海外名:Bunny Garden2)用の解像度修正やフレームレート上限変更などを行うBepInEx5用Modです。
-<img width="3839" height="2159" alt="image" src="https://github.com/user-attachments/assets/b4e45f40-5420-4811-8500-4a0c3b4d1e69" />
-<img width="3831" height="1946" alt="スクリーンショット 2026-04-16 191718-e" src="https://github.com/user-attachments/assets/f6c86e6b-2ad5-4b5f-bfa8-6ff66fcaf43b" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/b4e45f40-5420-4811-8500-4a0c3b4d1e69" />
+<img width="1920" height="1080" alt="スクリーンショット 2026-04-16 191718-e" src="https://github.com/user-attachments/assets/f6c86e6b-2ad5-4b5f-bfa8-6ff66fcaf43b" />
 
-## 対応バージョン(MODバージョンv1.0.2現在)
+## おしらせ
+バージョン1.0.3から、BepInEx6にも対応しました！！  
+今までのBepInEx5版もひきつづき開発します！！  
+また、下で紹介している導入方法はBepInEx5のものになります！ご了承ください～  
+
+## 対応バージョン(MODバージョンv1.0.3現在)
 - ゲームバージョン1.0.1のみ対応  
 
 ## 機能
 - 内部解像度を指定することで画質を向上することができる。
 - 本来は60で固定されていたフレームレート制限を任意の値にするか、取り払うことができる。
-- アンチエイリアスを設定し、さらに画面のガビガビ感(ジャギー)を減らすことができる。  
+- アンチエイリアスを設定し、さらに画面のガビガビ感(ジャギー)を減らすことができる。
+- F5キーでON/OFF、F6キーでカメラの固定ができる、フリーカメラ機能。
 
 ## 導入方法
 1. [Releases](https://github.com/kazumasa200/BunnyGarden2FixMod/releases/latest)から最新のzipファイルをダウンロードする。(BunnyGarden2FixMod v1.0.0.zipみたいな感じ)ブラウザによってはブロックするかもしれないので注意。<br>導入時の最新バージョンを入れてください。
