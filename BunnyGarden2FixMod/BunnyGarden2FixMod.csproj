@@ -39,6 +39,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.*" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="Assembly\Assembly-CSharp.dll" />
     <None Remove="Assembly\Unity.InputSystem.dll" />
     <None Remove="Assembly\Unity.RenderPipelines.Universal.Runtime.dll" />
@@ -67,7 +71,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="Assembly-CSharp">
+    <Reference Include="Assembly-CSharp" Publicize="true">
       <HintPath>Assembly\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="Unity.RenderPipelines.Universal.Runtime">

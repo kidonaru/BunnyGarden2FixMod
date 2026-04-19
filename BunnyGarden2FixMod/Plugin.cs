@@ -35,6 +35,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<float> ConfigFastSpeed;
     public static ConfigEntry<float> ConfigSlowSpeed;
     public static ConfigEntry<bool> ConfigCheatEnabled;
+    public static ConfigEntry<bool> ConfigUltimateSurvivorEnabled;
     public static ConfigEntry<bool> ConfigDisableStockings;
     public static ConfigEntry<bool> ConfigContinueVoiceOnTap;
     public static ConfigEntry<bool> ConfigEndingChekiSlideshow;
@@ -117,6 +118,12 @@ public class Plugin : BaseUnityPlugin
             "ChekiSlideshow",
             true,
             "true にするとエンディング中に撮影済みのチェキをスライドショーで表示します。");
+
+        ConfigUltimateSurvivorEnabled = Config.Bind(
+            "Cheat",
+            "UltimateSurvivor",
+            false,
+            "true にすると鉄骨渡りミニゲームで落下しなくなります（Ultimate Survivor）。");
 
         ConfigCheatEnabled = Config.Bind(
             "Cheat",
