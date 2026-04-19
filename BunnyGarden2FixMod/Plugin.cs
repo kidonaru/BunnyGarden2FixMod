@@ -37,6 +37,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> ConfigCheatEnabled;
     public static ConfigEntry<bool> ConfigDisableStockings;
     public static ConfigEntry<bool> ConfigContinueVoiceOnTap;
+    public static ConfigEntry<bool> ConfigEndingChekiSlideshow;
 
     private GameObject freeCamObject;
     private Camera freeCam;
@@ -110,6 +111,12 @@ public class Plugin : BaseUnityPlugin
             false,
             "true にすると会話送り（タップ／オート／スキップ）時にボイスが途中停止せず、\n" +
             "次の台詞のボイス再生で自然に上書きされるか、ボイスが最後まで再生されるようになります。");
+
+        ConfigEndingChekiSlideshow = Config.Bind(
+            "Ending",
+            "ChekiSlideshow",
+            true,
+            "true にするとエンディング中に撮影済みのチェキをスライドショーで表示します。");
 
         ConfigCheatEnabled = Config.Bind(
             "Cheat",
