@@ -1,5 +1,6 @@
 using BunnyGarden2FixMod.Utils;
 using GB;
+using GB.Scene;
 using HarmonyLib;
 
 namespace BunnyGarden2FixMod.Patches;
@@ -8,11 +9,12 @@ namespace BunnyGarden2FixMod.Patches;
 /// 会話送り（タップ／オート／スキップ）時に、現在再生中のボイスが途中で切れないようにする
 /// パッチ群。
 ///
-/// ConversationWindow は UpdateRoutine / ToNextText の中で GBSystem.StopVoice() を
-/// 呼び出しており、次の台詞に進むたびに現在のボイスが即停止する。
-/// これらのメソッドの実行範囲だけ StopVoice() を no-op にすることで、
-///   - 次の台詞にボイスがある場合: PlayVoice により AudioSource が上書きされ自然に切り替わる
-///   - 次の台詞にボイスがない場合: 現在のボイスが最後まで再生される
+/// ConversationWindow は UpdateRoutine / ToNextText の中で GBSystem.StopVoice() と
+/// EnvSceneBase.FinishLipSync() を呼び出しており、次の台詞に進むたびにボイスと口パクが
+/// 即停止する。これらのメソッドの実行範囲だけ StopVoice / FinishLipSync を no-op にすることで、
+///   - 次の台詞にボイスがある場合: PlayVoice / StartLipSync により自然に切り替わる
+///   - 次の台詞にボイスがない場合: 現在のボイスが最後まで再生され、口パクも
+///     LipSyncCalculator の自己終了判定で自動的に停止する
 /// という挙動を得る。
 ///
 /// ConversationWindow.ForceFinish（シーン遷移）や ASMR / HolidayAfterScene などの
@@ -93,6 +95,23 @@ public static class ContinueVoiceOnTap_StopVoicePatch
     {
         if (Plugin.ConfigContinueVoiceOnTap.Value && ContinueVoiceState.SuppressDepth > 0)
             return false; // 元の StopVoice を実行しない
+        return true;
+    }
+}
+
+[HarmonyPatch(typeof(EnvSceneBase), nameof(EnvSceneBase.FinishLipSync))]
+public static class ContinueVoiceOnTap_FinishLipSyncPatch
+{
+    static bool Prepare()
+    {
+        PatchLogger.LogInfo("[ContinueVoiceOnTapPatch] EnvSceneBase.FinishLipSync の抑制ゲートを登録");
+        return true;
+    }
+
+    private static bool Prefix()
+    {
+        if (Plugin.ConfigContinueVoiceOnTap.Value && ContinueVoiceState.SuppressDepth > 0)
+            return false; // 元の FinishLipSync を実行しない（LipSyncCalculator が音声終了時に自動停止）
         return true;
     }
 }
