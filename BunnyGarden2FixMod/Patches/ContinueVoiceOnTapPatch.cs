@@ -49,13 +49,16 @@ public static class ContinueVoiceOnTap_UpdateRoutinePatch
 
     private static void Prefix(out bool __state)
     {
-        __state = Plugin.ConfigContinueVoiceOnTap.Value;
-        if (__state) ContinueVoiceState.SuppressDepth++;
+        __state = false;
+        if (!Plugin.ConfigContinueVoiceOnTap.Value) return;
+        ContinueVoiceState.SuppressDepth++;
+        __state = true;
     }
 
     private static void Postfix(bool __state)
     {
-        if (__state && ContinueVoiceState.SuppressDepth > 0)
+        if (!__state) return;
+        if (ContinueVoiceState.SuppressDepth > 0)
             ContinueVoiceState.SuppressDepth--;
     }
 }
@@ -71,13 +74,16 @@ public static class ContinueVoiceOnTap_ToNextTextPatch
 
     private static void Prefix(out bool __state)
     {
-        __state = Plugin.ConfigContinueVoiceOnTap.Value;
-        if (__state) ContinueVoiceState.SuppressDepth++;
+        __state = false;
+        if (!Plugin.ConfigContinueVoiceOnTap.Value) return;
+        ContinueVoiceState.SuppressDepth++;
+        __state = true;
     }
 
     private static void Postfix(bool __state)
     {
-        if (__state && ContinueVoiceState.SuppressDepth > 0)
+        if (!__state) return;
+        if (ContinueVoiceState.SuppressDepth > 0)
             ContinueVoiceState.SuppressDepth--;
     }
 }
@@ -93,9 +99,8 @@ public static class ContinueVoiceOnTap_StopVoicePatch
 
     private static bool Prefix()
     {
-        if (Plugin.ConfigContinueVoiceOnTap.Value && ContinueVoiceState.SuppressDepth > 0)
-            return false; // 元の StopVoice を実行しない
-        return true;
+        if (!Plugin.ConfigContinueVoiceOnTap.Value) return true; // 設定オフ時は早期リターン
+        return ContinueVoiceState.SuppressDepth <= 0; // 抑制中なら StopVoice を実行しない
     }
 }
 
@@ -110,8 +115,7 @@ public static class ContinueVoiceOnTap_FinishLipSyncPatch
 
     private static bool Prefix()
     {
-        if (Plugin.ConfigContinueVoiceOnTap.Value && ContinueVoiceState.SuppressDepth > 0)
-            return false; // 元の FinishLipSync を実行しない（LipSyncCalculator が音声終了時に自動停止）
-        return true;
+        if (!Plugin.ConfigContinueVoiceOnTap.Value) return true; // 設定オフ時は早期リターン
+        return ContinueVoiceState.SuppressDepth <= 0; // 抑制中なら FinishLipSync を実行しない（LipSyncCalculator が音声終了時に自動停止）
     }
 }
