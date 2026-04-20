@@ -9,11 +9,6 @@ namespace BunnyGarden2FixMod.ExSave;
 /// <see cref="ExSaveData"/> の各スロット要素として格納される。
 ///
 /// <para>
-/// メソッド群は旧 <see cref="ExSaveData"/> の API を踏襲し、
-/// <c>ChekiSaveHiResPatch</c> / <c>ChekiItemLoadHiResPatch</c> から透過的に使用できる。
-/// </para>
-///
-/// <para>
 /// 直列化は MessagePack 属性付き POCO として <see cref="ExSaveData"/> が一括担当する。
 /// このクラス自身は entry 列の操作 API を提供する。
 /// </para>

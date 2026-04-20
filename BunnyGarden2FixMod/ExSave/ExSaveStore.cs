@@ -47,13 +47,6 @@ public static class ExSaveStore
     /// </summary>
     public static int CurrentSaveSlot { get; set; } = -1;
 
-    /// <summary>
-    /// 旧 API 互換プロパティ（v1 デプロイ版で外部から参照されていた可能性のある API）。
-    /// v2 では <see cref="CurrentSession"/> を直接使用すること。
-    /// </summary>
-    [Obsolete("ExSaveStore.Current は将来バージョンで削除予定です。ExSaveStore.CurrentSession を使用してください。", false)]
-    public static ExSaveSlotData Current => CurrentSession;
-
     /// <summary>現在のセーブに対応する主セーブのパス（Load/Save 後に確定）。null の間は I/O スキップ。</summary>
     public static string CurrentMainPath { get; private set; }
 
