@@ -56,6 +56,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<int> ConfigChekiJpgQuality;
     public static ConfigEntry<bool> ConfigEndingChekiSlideshow;
     public static ConfigEntry<bool> ConfigCastOrderEnabled;
+    public static ConfigEntry<bool> ConfigDebugCommandsEnabled;
 
     private GameObject freeCamObject;
     private Camera freeCam;
@@ -190,6 +191,17 @@ public class Plugin : BaseUnityPlugin
             false,
             "true にするとギャンブルで負けなくなります。");
 
+        ConfigDebugCommandsEnabled = Config.Bind(
+            "Debug",
+            "CommandsEnabled",
+            false,
+            "true にするとデバッグコマンドメニューを有効化します。\n" +
+            "F10 キーでメニューの表示／非表示を切り替え、メニュー内のボタンからコマンドを発火します。\n" +
+            "コマンド例: いきなりエンディング再生、所持金 +10000。\n" +
+            "【注意】本機能はセーブデータを書き換えるコマンドを含みます（所持金加算、強制シーン遷移）。\n" +
+            "効果はそのままセーブに反映されるため、本プレイ中のセーブに対しての利用は避けてください。\n" +
+            "本機能はデバッグ・検証用です。通常プレイでは false のままにしてください。");
+
         ConfigCheatEnabled = Config.Bind(
             "Cheat",
             "Enabled",
@@ -211,6 +223,7 @@ public class Plugin : BaseUnityPlugin
         // async ステートマシンは Harmony でパッチできないため LateUpdate 方式で補正
         Patches.CameraZoomPatch.Initialize(gameObject);
         Patches.CastOrderPatch.Initialize(gameObject);
+        Patches.DebugCommandsPatch.Initialize(gameObject);
         PatchLogger.LogInfo($"プラグイン起動: {MyPluginInfo.PLUGIN_GUID} v{MyPluginInfo.PLUGIN_VERSION}");
         PatchLogger.LogInfo($"解像度パッチを適用しました: {Plugin.ConfigWidth.Value}x{Plugin.ConfigHeight.Value}");
         PatchLogger.LogInfo($"アンチエイリアシング設定: {Plugin.ConfigAntiAliasing.Value}");
