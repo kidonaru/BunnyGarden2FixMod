@@ -51,7 +51,7 @@ public sealed class ChekiSlideshowBehaviour : MonoBehaviour
     private const float ChekiBorderRatio = 0.02f;
 
     /// <summary>チェキシートの下ボーダー幅（写真サイズ比率）。サインエリア分を多めに取る</summary>
-    private const float ChekiBottomRatio = 0.16f;
+    private const float ChekiBottomRatio = 0.19f;
 
     /// <summary>チェキシートの色（白 = Polaroid 風）</summary>
     private static readonly Color ChekiSheetColor = Color.white;
@@ -321,7 +321,7 @@ public sealed class ChekiSlideshowBehaviour : MonoBehaviour
 
             // カード下端（border内側）を基準に上方向へ積む
             graffitiRt.anchorMin = graffitiRt.anchorMax = new Vector2(0.5f, 0f);
-            graffitiRt.pivot     = new Vector2(0.5f, 0f);
+            graffitiRt.pivot = new Vector2(0.5f, 0f);
             graffitiRt.sizeDelta = new Vector2(availW, availH);
             graffitiRt.anchoredPosition = new Vector2(0f, border);
 
