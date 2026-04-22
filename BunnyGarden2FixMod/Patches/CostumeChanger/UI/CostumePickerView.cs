@@ -86,6 +86,7 @@ public class CostumePickerView : MonoBehaviour
         if (m_panel == null) return;
         m_headerText.text = $"衣装変更 — {data.CharId}";
         m_tabStrip.SetActive((int)data.ActiveTab);
+        m_tabStrip.SetBadges(new[] { data.CostumeCurrent >= 0, data.PantiesCurrent >= 0, data.StockingCurrent >= 0 });
 
         var (labels, locks, selected, current) = data.ActiveTab switch
         {
@@ -205,6 +206,12 @@ public class CostumePickerView : MonoBehaviour
             9, UITTheme.Text.Secondary, m_font, TextAnchor.UpperLeft);
         note.style.whiteSpace = WhiteSpace.Normal;
         footer.Add(note);
+
+        var note2 = UITFactory.CreateLabel(
+            "※ プラグイン有効後に、一度でも着用した衣装に切り替え可能",
+            9, UITTheme.Text.Secondary, m_font, TextAnchor.UpperLeft);
+        note2.style.whiteSpace = WhiteSpace.Normal;
+        footer.Add(note2);
 
         // × close button（絶対配置）
         var close = UITFactory.CreateButton("×", () => OnCloseClicked?.Invoke(), 16, m_font);

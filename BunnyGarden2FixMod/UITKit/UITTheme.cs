@@ -59,6 +59,7 @@ public static class UITTheme
         public static readonly Color InactiveFill = new(0.15f, 0.15f, 0.2f, 0.8f);
         public static readonly Color ActiveFill = new(0.75f, 0.55f, 0.85f, 0.85f);
         public static readonly Color Border = new(0.5f, 0.5f, 0.55f, 0.7f);
+        public static readonly Color BadgeColor = new(1f, 0.85f, 0.3f, 1f);
         public const float Radius = 4f;
         public const float BorderWidth = 1f;
     }
