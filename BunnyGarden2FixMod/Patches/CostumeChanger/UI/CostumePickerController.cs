@@ -24,6 +24,11 @@ public class CostumePickerController : MonoBehaviour
     private bool m_loading;
     private CharID m_activeChar = CharID.NUM;
 
+    private enum PickerMode { Picker, Settings }
+    private PickerMode m_mode = PickerMode.Picker;
+    private int m_settingsSelected = -1;  // -1: 未選択, 0: 初期化, 1: すべて解放
+    private bool m_dialogPending;         // ConfirmDialog 呼出〜アクション完了までの多重実行防止
+
     // タブ状態
     private CostumePickerView.WardrobeTab m_activeTab = CostumePickerView.WardrobeTab.Costume;
     private int m_costumeSelected = -1;
@@ -59,6 +64,8 @@ public class CostumePickerController : MonoBehaviour
     public static bool ShouldSuppressGameInput()
     {
         if (Plugin.ConfigCostumeChangerEnabled?.Value != true) return false;
+        // ConfirmDialog 表示中は抑制解除（ダイアログが GBInput を読むため）
+        if (ConfirmDialogHelper.IsActive()) return false;
         var ctrl = Instance;
         return ctrl != null && ctrl.IsPickerShown && ctrl.IsCursorOverPicker;
     }
@@ -85,6 +92,10 @@ public class CostumePickerController : MonoBehaviour
         m_view.OnTabClicked += HandleTabClicked;
         m_view.OnRowClicked += HandleRowClicked;
         m_view.OnCloseClicked += HandleCloseClicked;
+        m_view.OnSettingsClicked += HandleSettingsClicked;
+        m_view.OnBackClicked += HandleBackClicked;
+        m_view.OnResetAllClicked += HandleResetAllClicked;
+        m_view.OnUnlockAllClicked += HandleUnlockAllClicked;
     }
 
     private void OnDestroy()
@@ -94,6 +105,10 @@ public class CostumePickerController : MonoBehaviour
             m_view.OnTabClicked -= HandleTabClicked;
             m_view.OnRowClicked -= HandleRowClicked;
             m_view.OnCloseClicked -= HandleCloseClicked;
+            m_view.OnSettingsClicked -= HandleSettingsClicked;
+            m_view.OnBackClicked -= HandleBackClicked;
+            m_view.OnResetAllClicked -= HandleResetAllClicked;
+            m_view.OnUnlockAllClicked -= HandleUnlockAllClicked;
         }
         if (Instance == this) Instance = null;
     }
@@ -140,6 +155,10 @@ public class CostumePickerController : MonoBehaviour
         // m_view.IsShown などを触る前段で早期 return する。
         if (m_view == null) return;
 
+        // ConfirmDialog 表示中は Hotkey もピッカー操作も全て無視
+        // (ダイアログは GBInput で A/B/Esc を直接読むため、こちらは一切動かさない)
+        if (ConfirmDialogHelper.IsActive()) return;
+
         var kb = Keyboard.current;
         if (kb == null) return;
 
@@ -165,6 +184,12 @@ public class CostumePickerController : MonoBehaviour
         CheckCastChanged();  // カーソル位置に関係なくキャスト変化に追従する
 
         if (!IsCursorOverPicker) return;   // カーソルがパネル外の場合はキーボード操作を無視
+
+        if (m_mode == PickerMode.Settings)
+        {
+            UpdateSettingsMode(kb);
+            return;
+        }
 
         // タブ切替（A/D・←/→）
         if (kb[Key.A].wasPressedThisFrame || kb[Key.LeftArrow].wasPressedThisFrame)
@@ -234,7 +259,8 @@ public class CostumePickerController : MonoBehaviour
     {
         m_activeTab = CostumePickerView.WardrobeTab.Costume;
         RebuildItemsFor(charId);
-        m_view.Show(BuildRenderData());
+        m_mode = PickerMode.Picker;   // 毎回ピッカーから開始
+        m_view.ShowPicker(BuildRenderData());
         int cUnlock = m_costumeItems.Count(x => !x.Locked);
         int pUnlock = m_pantiesItems.Count(x => !x.Locked);
         int sUnlock = m_stockingItems.Count(x => !x.Locked);
@@ -312,7 +338,10 @@ public class CostumePickerController : MonoBehaviour
         var oldId = m_activeChar;
         // m_activeTab は意図的に引き継ぐ — キャスト切替時は現在タブを維持する。
         RebuildItemsFor(newId);
-        m_view.Render(BuildRenderData());
+        if (m_mode == PickerMode.Settings)
+            m_view.RenderSettings(BuildSettingsData());
+        else
+            m_view.Render(BuildRenderData());
         PatchLogger.LogInfo($"[CostumePicker] キャスト切替: {oldId} → {newId}");
     }
 
@@ -709,5 +738,203 @@ public class CostumePickerController : MonoBehaviour
         }
 
         env.ShowCharacter();
+    }
+
+    private void HandleSettingsClicked()
+    {
+        if (!m_view.IsShown) return;
+        if (m_activeChar >= CharID.NUM) return;
+        ShowSettings();
+    }
+
+    private void HandleBackClicked()
+    {
+        if (!m_view.IsShown) return;
+        if (m_mode != PickerMode.Settings) return;
+        ShowPicker();
+    }
+
+    private void ShowSettings()
+    {
+        m_mode = PickerMode.Settings;
+        m_settingsSelected = -1;
+        m_view.ShowSettings(BuildSettingsData());
+        m_view.SetSettingsSelection(m_settingsSelected);
+    }
+
+    private void ShowPicker()
+    {
+        m_mode = PickerMode.Picker;
+        m_view.ShowPicker(BuildRenderData());
+    }
+
+    private void HandleResetAllClicked()
+    {
+        if (!m_view.IsShown || m_mode != PickerMode.Settings) return;
+        if (m_dialogPending || m_loading) return;
+        if (m_activeChar >= CharID.NUM) return;
+        ConfirmAndExecuteReset(m_activeChar).Forget();
+    }
+
+    private void HandleUnlockAllClicked()
+    {
+        if (!m_view.IsShown || m_mode != PickerMode.Settings) return;
+        if (m_dialogPending || m_loading) return;
+        if (m_activeChar >= CharID.NUM) return;
+        if (!IsEndingClearedFor(m_activeChar))
+        {
+            // UI はグレーアウトしているが、キー操作経路でも弾く
+            PatchLogger.LogInfo($"[CostumePicker] すべて解放: {m_activeChar} はエンディング未クリアのためスキップ");
+            return;
+        }
+        ConfirmAndExecuteUnlockAll(m_activeChar).Forget();
+    }
+
+    private async UniTaskVoid ConfirmAndExecuteReset(CharID id)
+    {
+        m_dialogPending = true;
+        try
+        {
+            bool ok = await ConfirmDialogHelper.ShowYesNoAsync(
+                "解放状態を初期化しますか？\n（上書き中の衣装も既定に戻ります）",
+                this.GetCancellationTokenOnDestroy());
+            if (!ok) return;
+            await ExecuteReset(id);
+        }
+        catch (Exception ex)
+        {
+            PatchLogger.LogWarning($"[CostumePicker] ExecuteReset 失敗: {ex}");
+        }
+        finally { m_dialogPending = false; }
+    }
+
+    private async UniTaskVoid ConfirmAndExecuteUnlockAll(CharID id)
+    {
+        m_dialogPending = true;
+        try
+        {
+            bool ok = await ConfirmDialogHelper.ShowYesNoAsync(
+                "このキャラの全衣装・パンツ・ストッキングを解放しますか？",
+                this.GetCancellationTokenOnDestroy());
+            if (!ok) return;
+            ExecuteUnlockAll(id);
+        }
+        catch (Exception ex)
+        {
+            PatchLogger.LogWarning($"[CostumePicker] ExecuteUnlockAll 失敗: {ex}");
+        }
+        finally { m_dialogPending = false; }
+    }
+
+    private async UniTask ExecuteReset(CharID id)
+    {
+        if (m_loading) return;
+        m_loading = true;
+        try
+        {
+            CostumeOverrideStore.Clear(id);
+            PantiesOverrideStore.Clear(id);
+            StockingOverrideStore.Clear(id);
+            await ReloadCurrentInternal(id);
+            RestoreDefaultPanties(id);
+            RestoreDefaultStocking(id);
+
+            CostumeViewHistory.ClearAll(id);
+            PantiesViewHistory.ClearAll(id);
+            StockingViewHistory.ClearAll(id);
+
+            RebuildItemsFor(id);
+            // await 中にユーザが × でパネルを閉じた場合、勝手に再表示しない
+            if (m_view != null && m_view.IsShown) ShowPicker();
+            PatchLogger.LogInfo($"[CostumePicker] 初期化完了: {id}");
+        }
+        finally { m_loading = false; }
+    }
+
+    private void ExecuteUnlockAll(CharID id)
+    {
+        // m_costumeItems 等は ShowSettings 時点の RebuildItemsFor でキャスト分ビルド済み。
+        // DLC 未導入衣装はそこで既にフィルタされているため、そのまま bulk API に渡せる。
+        CostumeViewHistory.MarkViewedBulk(id, m_costumeItems.Select(x => x.Costume));
+        PantiesViewHistory.MarkViewedBulk(id, m_pantiesItems.Select(x => (x.Type, x.Color)));
+        StockingViewHistory.MarkViewedBulk(id, m_stockingItems.Select(x => x.Type));
+        RebuildItemsFor(id);   // 解放反映のため再構築
+        if (m_view != null && m_view.IsShown) ShowPicker();
+        PatchLogger.LogInfo($"[CostumePicker] すべて解放完了: {id} 衣装{m_costumeItems.Count}/パンツ{m_pantiesItems.Count}/ストッキング{m_stockingItems.Count}");
+    }
+
+    private void UpdateSettingsMode(Keyboard kb)
+    {
+        // W/S/↑/↓: [-1=未選択, 0=初期化, 1=すべて解放] の 3 位置をクランプ移動。
+        // W で -1 まで戻せるため、ハイライトを消して「何も選んでいない」状態にできる。
+        if (kb[Key.W].wasPressedThisFrame || kb[Key.UpArrow].wasPressedThisFrame)
+        {
+            if (m_settingsSelected > -1)
+            {
+                m_settingsSelected--;
+                m_view.SetSettingsSelection(m_settingsSelected);
+            }
+            return;
+        }
+        if (kb[Key.S].wasPressedThisFrame || kb[Key.DownArrow].wasPressedThisFrame)
+        {
+            if (m_settingsSelected < 1)
+            {
+                int next = m_settingsSelected + 1;
+                // index 1 (すべて解放) は GoodEnd 未クリア時は無効表示なのでハイライトさせない
+                if (next == 1 && !IsEndingClearedFor(m_activeChar)) return;
+                m_settingsSelected = next;
+                m_view.SetSettingsSelection(m_settingsSelected);
+            }
+            return;
+        }
+
+        // Enter: 選択中ボタン実行（未選択時は何もしない）
+        if (kb[Key.Enter].wasPressedThisFrame || kb[Key.NumpadEnter].wasPressedThisFrame)
+        {
+            if (m_settingsSelected == 0) HandleResetAllClicked();
+            else if (m_settingsSelected == 1) HandleUnlockAllClicked();
+            return;
+        }
+
+        // Esc: ピッカーに戻る
+        if (kb[Key.Escape].wasPressedThisFrame)
+        {
+            ShowPicker();
+            return;
+        }
+    }
+
+    private CostumePickerView.SettingsData BuildSettingsData()
+    {
+        return new CostumePickerView.SettingsData
+        {
+            CharId = m_activeChar,
+            UnlockAllEnabled = IsEndingClearedFor(m_activeChar),
+        };
+    }
+
+    /// <summary>
+    /// FittingRoom と同じ条件でキャラの GoodEnd クリア状況を判定する。
+    /// （Assembly-CSharp/GB.Extra/Album.cs の enterFittingRoom と同じマッピング）
+    /// </summary>
+    private static bool IsEndingClearedFor(CharID id)
+    {
+        int routeIndex = id switch
+        {
+            CharID.KANA => 0,
+            CharID.RIN => 1,
+            CharID.MIUKA => 2,
+            CharID.ERISA => 3,
+            CharID.KUON => 4,
+            CharID.LUNA => 5,
+            _ => -1,
+        };
+        if (routeIndex < 0) return false;
+        var sd = GBSystem.Instance?.RefSaveData();
+        if (sd == null) return false;
+        var routes = sd.GetClearRoute();
+        if (routes == null || routeIndex >= routes.Length) return false;
+        return routes[routeIndex];
     }
 }

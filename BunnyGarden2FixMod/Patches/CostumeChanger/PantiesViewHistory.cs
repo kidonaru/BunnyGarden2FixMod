@@ -78,6 +78,36 @@ public static class PantiesViewHistory
         PatchLogger.LogInfo($"[PantiesViewHistory] 記録: {id} / type={type} color={color}");
     }
 
+    /// <summary>指定キャラの履歴をすべてクリアする。dedup もリセット。</summary>
+    public static void ClearAll(CharID id)
+    {
+        if (id >= CharID.NUM) return;
+        WriteBits(id, 0UL);
+        ResetDedup();
+        PatchLogger.LogInfo($"[PantiesViewHistory] クリア: {id}");
+    }
+
+    /// <summary>
+    /// 指定した (type, color) ペア集合を一括で表示済みにする。
+    /// 呼び出し側で「解放可能」な集合を渡す前提。範囲外要素は無視。
+    /// </summary>
+    public static void MarkViewedBulk(CharID id, IEnumerable<(int Type, int Color)> items)
+    {
+        if (id >= CharID.NUM || items == null) return;
+        ulong bits = ReadBits(id);
+        ulong newBits = bits;
+        foreach (var (t, c) in items)
+        {
+            int index = ToIndex(t, c);
+            if (index < 0) continue;
+            newBits |= (1UL << index);
+        }
+        if (newBits == bits) return;
+        WriteBits(id, newBits);
+        ResetDedup();
+        PatchLogger.LogInfo($"[PantiesViewHistory] 一括記録: {id} bits=0x{newBits:X}");
+    }
+
     private static int ToIndex(int type, int color)
     {
         if (type < 0 || type >= PantiesOverrideStore.TypeCount) return -1;

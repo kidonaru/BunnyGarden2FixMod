@@ -84,6 +84,34 @@ public static class CostumeViewHistory
         PatchLogger.LogInfo($"[CostumeViewHistory] 記録: {id} / {costume}");
     }
 
+    /// <summary>指定キャラの履歴をすべてクリアする（bits=0 を書き込む）。dedup もリセット。</summary>
+    public static void ClearAll(CharID id)
+    {
+        if (id >= CharID.NUM) return;
+        WriteBits(id, 0u);
+        ResetDedup();
+        PatchLogger.LogInfo($"[CostumeViewHistory] クリア: {id}");
+    }
+
+    /// <summary>
+    /// 指定した衣装集合を一括で表示済みにする。現在 bits と OR 合成し変化があれば 1 回だけ WriteBits。
+    /// 呼び出し側で DLC 未導入等の「解放不可」を除外した集合を渡す前提。
+    /// </summary>
+    public static void MarkViewedBulk(CharID id, IEnumerable<CostumeType> costumes)
+    {
+        if (id >= CharID.NUM || costumes == null) return;
+        uint bits = ReadBits(id);
+        uint newBits = bits;
+        foreach (var c in costumes)
+        {
+            if (c < CostumeType.Num) newBits |= (1u << (int)c);
+        }
+        if (newBits == bits) return;
+        WriteBits(id, newBits);
+        ResetDedup();
+        PatchLogger.LogInfo($"[CostumeViewHistory] 一括記録: {id} bits=0x{newBits:X}");
+    }
+
     private static string Key(CharID id) => KeyPrefix + ((int)id);
 
     private static uint ReadBits(CharID id)

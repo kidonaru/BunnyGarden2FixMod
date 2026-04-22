@@ -43,6 +43,25 @@ public static class UITFactory
         return btn;
     }
 
+    /// <summary>
+    /// 背景画像アイコンを持つボタン。ラベルテキストなし、パディング 0、
+    /// 背景画像は 70% スケールで中央描画、Text.Primary でティント。
+    /// 位置・サイズは呼び出し側で設定する前提。
+    /// </summary>
+    public static Button CreateTextureButton(Texture2D tex, Action onClick, Font font = null)
+    {
+        var btn = CreateButton("", onClick, 14, font);
+        btn.style.paddingLeft = 0;
+        btn.style.paddingRight = 0;
+        btn.style.paddingTop = 0;
+        btn.style.paddingBottom = 0;
+        btn.style.backgroundImage = new StyleBackground(tex);
+        btn.style.backgroundSize = new StyleBackgroundSize(
+            new BackgroundSize(Length.Percent(70), Length.Percent(70)));
+        btn.style.unityBackgroundImageTintColor = new StyleColor(UITTheme.Text.Primary);
+        return btn;
+    }
+
     /// <summary>背景色・角丸・枠線が Panel テーマに設定された空 VisualElement。</summary>
     public static VisualElement CreatePanel()
     {

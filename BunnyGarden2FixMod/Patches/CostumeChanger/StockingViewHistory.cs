@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using BunnyGarden2FixMod.ExSave;
 using BunnyGarden2FixMod.Utils;
 using GB.Game;
@@ -61,6 +62,35 @@ public static class StockingViewHistory
         if (newBits == bits) return;
         WriteBits(id, newBits);
         PatchLogger.LogInfo($"[StockingViewHistory] 記録: {id} / stocking={stocking}");
+    }
+
+    /// <summary>指定キャラの履歴をすべてクリアする。dedup もリセット。</summary>
+    public static void ClearAll(CharID id)
+    {
+        if (id >= CharID.NUM) return;
+        WriteBits(id, 0u);
+        ResetDedup();
+        PatchLogger.LogInfo($"[StockingViewHistory] クリア: {id}");
+    }
+
+    /// <summary>
+    /// 指定した stocking type 集合を一括で表示済みにする。
+    /// 呼び出し側で「解放可能」な集合を渡す前提。範囲外 (&lt;0 or &gt;=32) は無視。
+    /// </summary>
+    public static void MarkViewedBulk(CharID id, IEnumerable<int> types)
+    {
+        if (id >= CharID.NUM || types == null) return;
+        uint bits = ReadBits(id);
+        uint newBits = bits;
+        foreach (var t in types)
+        {
+            if (t < 0 || t >= 32) continue;
+            newBits |= (1u << t);
+        }
+        if (newBits == bits) return;
+        WriteBits(id, newBits);
+        ResetDedup();
+        PatchLogger.LogInfo($"[StockingViewHistory] 一括記録: {id} bits=0x{newBits:X}");
     }
 
     public static bool IsTypeViewed(CharID id, int stocking) => IsViewed(id, stocking);
