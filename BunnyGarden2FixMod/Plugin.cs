@@ -49,6 +49,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> ConfigUltimateSurvivorEnabled;
     public static ConfigEntry<bool> ConfigGambleAlwaysWinEnabled;
     public static ConfigEntry<bool> ConfigDisableStockings;
+    public static ConfigEntry<string> ConfigApplyKneeHigh;
     public static ConfigEntry<bool> ConfigContinueVoiceOnTap;
     public static ConfigEntry<bool> ConfigChekiHighResEnabled;
     public static ConfigEntry<int> ConfigChekiSize;
@@ -121,6 +122,13 @@ public class Plugin : BaseUnityPlugin
             "DisableStockings",
             false,
             "true にするとキャストのストッキングを非表示にします。");
+
+        ConfigApplyKneeHigh = Config.Bind(
+            "Appearance",
+            "ApplyKneeHigh",
+            "",
+            "ニーハイを適用するキャラクターの名前をローマ字でスペース区切りで指定します。\n" +
+            "例: \"kana rin miuka erisa kuon luna\"");
 
         ConfigContinueVoiceOnTap = Config.Bind(
             "Conversation",
@@ -211,6 +219,7 @@ public class Plugin : BaseUnityPlugin
         // async ステートマシンは Harmony でパッチできないため LateUpdate 方式で補正
         Patches.CameraZoomPatch.Initialize(gameObject);
         Patches.CastOrderPatch.Initialize(gameObject);
+        Patches.KneeSocksPatch.Initialize(gameObject);
         PatchLogger.LogInfo($"プラグイン起動: {MyPluginInfo.PLUGIN_GUID} v{MyPluginInfo.PLUGIN_VERSION}");
         PatchLogger.LogInfo($"解像度パッチを適用しました: {Plugin.ConfigWidth.Value}x{Plugin.ConfigHeight.Value}");
         PatchLogger.LogInfo($"アンチエイリアシング設定: {Plugin.ConfigAntiAliasing.Value}");
