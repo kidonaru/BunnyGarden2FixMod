@@ -126,7 +126,7 @@ public class CostumePickerView : MonoBehaviour
         {
             // LegacyRuntime.ttf 自体は ASCII のみだが、UI Toolkit の dynamic font fallback で
             // 日本語描画に成功している実測例があるため、ここは警告だけに留める。
-            PatchLogger.LogWarning("[CostumePicker] 日本語対応 Font が見つかりませんでした（LegacyRuntime fallback を使用）");
+            PatchLogger.LogInfo("[CostumePicker] 日本語対応 Font が見つかりませんでした（LegacyRuntime fallback を使用）");
         }
 
         m_settings = UITRuntime.CreatePanelSettings();
@@ -134,7 +134,7 @@ public class CostumePickerView : MonoBehaviour
         PatchLogger.LogInfo($"[CostumePicker] 既存 PanelSettings: {(otherPanels.Count == 0 ? "<none>" : string.Join(", ", otherPanels))}");
         if (m_settings.themeStyleSheet == null)
         {
-            PatchLogger.LogWarning("[CostumePicker] themeStyleSheet を解決できませんでした — UI が描画されない可能性があります");
+            PatchLogger.LogInfo("[CostumePicker] themeStyleSheet を解決できませんでした — UI が描画されない可能性があります");
         }
         else
         {
