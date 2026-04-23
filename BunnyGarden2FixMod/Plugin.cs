@@ -62,6 +62,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> ConfigCostumeChangerEnabled;
     public static ConfigEntry<UnityEngine.InputSystem.Key> ConfigCostumeChangerHotkey;
     public static ConfigEntry<bool> ConfigRespectGameCostumeOverride;
+    public static ConfigEntry<bool> ConfigSteamLaunchCheck;
 
     private GameObject freeCamObject;
     private Camera freeCam;
@@ -249,8 +250,23 @@ public class Plugin : BaseUnityPlugin
             true,
             "true のとき、ゲーム本体が CostumeOverride を ForceXxx に設定している間は MOD 側の override を一時停止します。");
 
+        ConfigSteamLaunchCheck = Config.Bind(
+            "General",
+            "SteamLaunchCheck",
+            true,
+            "true にすると Steam 外から直接起動された場合に Steam 経由で自動的に再起動します。\n" +
+            "デバッグ目的でゲームフォルダに steam_appid.txt（内容: 3443820）を置くと、この機能をバイパスできます。");
+
         Logger = base.Logger;
         PatchLogger.Initialize(Logger);
+
+        // Steam 外起動を検出した場合は Steam 経由で再起動して即終了
+        if (ConfigSteamLaunchCheck.Value && SteamLaunchChecker.CheckAndRelaunchIfNeeded())
+        {
+            Application.Quit();
+            return;
+        }
+
         StartCoroutine(UpdateChecker.Check());
         var harmony = new Harmony(MyPluginInfo.PLUGIN_GUID);
         harmony.PatchAll();
