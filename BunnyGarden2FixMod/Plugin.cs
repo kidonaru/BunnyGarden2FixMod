@@ -62,6 +62,9 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> ConfigCostumeChangerEnabled;
     public static ConfigEntry<UnityEngine.InputSystem.Key> ConfigCostumeChangerHotkey;
     public static ConfigEntry<bool> ConfigRespectGameCostumeOverride;
+    public static ConfigEntry<bool> ConfigSwimWearStocking;
+
+    public static Plugin Instance { get; private set; }
 
     private GameObject freeCamObject;
     private Camera freeCam;
@@ -74,6 +77,8 @@ public class Plugin : BaseUnityPlugin
 
     private void Awake()
     {
+        Instance = this;
+
         ConfigWidth = Config.Bind(
             "Resolution",
             "Width",
@@ -249,6 +254,13 @@ public class Plugin : BaseUnityPlugin
             true,
             "true のとき、ゲーム本体が CostumeOverride を ForceXxx に設定している間は MOD 側の override を一時停止します。");
 
+        ConfigSwimWearStocking = Config.Bind(
+            "CostumeChanger",
+            "SwimWearStocking",
+            false,
+            "true にすると水着コスチューム着用中にストッキングを適用できるようになります。\n" +
+            "水着モデルには本来ストッキング用ブレンドシェイプがないため、同キャラの Babydoll コスチュームからデータを移植します。");
+
         Logger = base.Logger;
         PatchLogger.Initialize(Logger);
         StartCoroutine(UpdateChecker.Check());
@@ -258,6 +270,7 @@ public class Plugin : BaseUnityPlugin
         Patches.CameraZoomPatch.Initialize(gameObject);
         Patches.CastOrderPatch.Initialize(gameObject);
         Patches.CostumeChanger.CostumeChangerPatch.Initialize(gameObject);
+        Patches.CostumeChanger.StockingsDonorLoader.Initialize(gameObject);
         PatchLogger.LogInfo($"プラグイン起動: {MyPluginInfo.PLUGIN_GUID} v{MyPluginInfo.PLUGIN_VERSION}");
         PatchLogger.LogInfo($"解像度パッチを適用しました: {Plugin.ConfigWidth.Value}x{Plugin.ConfigHeight.Value}");
         PatchLogger.LogInfo($"アンチエイリアシング設定: {Plugin.ConfigAntiAliasing.Value}");

@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -54,6 +53,22 @@ public class KneeSocksLoader : MonoBehaviour
 
     /// <summary>マテリアルプリロード中かどうかを返す。DisableStockingPatch などのガードに使用する。</summary>
     public static bool IsPreloading { get; private set; }
+
+    /// <summary>
+    /// 水着×ニーソックス用: kneehigh SMR を借用してマテリアルを取得するためのアクセサ。
+    /// </summary>
+    internal static SkinnedMeshRenderer KneeSocksSmr => s_kneeSocks;
+
+    /// <summary>
+    /// 指定 override type（5-7）に対応する kneehigh マテリアルを返す。未ロード時は s_kneeSocks の既定マテリアルを返す。
+    /// </summary>
+    internal static Material GetMaterialForOverride(int overrideType)
+    {
+        int idx = StockingOverrideStore.KneeSocksStockingType(overrideType);
+        if (idx > 0 && idx < s_stockingMaterials.Length && s_stockingMaterials[idx] != null)
+            return s_stockingMaterials[idx];
+        return s_kneeSocks != null ? s_kneeSocks.sharedMaterial : null;
+    }
 
     public static void Initialize(GameObject parent)
     {
@@ -203,6 +218,8 @@ public class KneeSocksLoader : MonoBehaviour
     {
         if (IsPreloading) return; // プリロード中の dummy handle への誤適用を防ぐ
         if (handle?.Chara == null) return;
+        // 水着は SwimWearStockingPatch が専用ロジックで処理するためスキップ
+        if (handle.m_lastLoadArg != null && handle.m_lastLoadArg.Costume == CostumeType.SwimWear) return;
         var id = handle.GetCharID();
         if (!StockingOverrideStore.TryGet(id, out var stk) || !StockingOverrideStore.IsKneeSocksType(stk)) return;
         Apply(handle.Chara, stk);
@@ -210,6 +227,7 @@ public class KneeSocksLoader : MonoBehaviour
 
     private static void SetBlendShape(SkinnedMeshRenderer renderer, string name, float weight)
     {
+        if (renderer == null || renderer.sharedMesh == null) return;
         int idx = renderer.sharedMesh.GetBlendShapeIndex(name);
         if (idx >= 0) renderer.SetBlendShapeWeight(idx, weight);
     }
