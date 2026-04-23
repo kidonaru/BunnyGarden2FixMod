@@ -240,6 +240,9 @@ public class Plugin : BaseUnityPlugin
 
     private void OnGUI()
     {
+        if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.F4)
+            Config.Reload();
+
         if (Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.F5)
             ToggleFreeCam();
 

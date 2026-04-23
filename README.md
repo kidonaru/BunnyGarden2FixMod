@@ -23,9 +23,13 @@
 - チェキ（撮影写真）を高解像度で保存できる。(デフォルトでは無効)
 
 ## 導入方法(Steam Deckも対応)
-1. [Releases](https://github.com/kazumasa200/BunnyGarden2FixMod/releases/latest)から最新のzipファイルをダウンロードする。(BunnyGarden2FixMod v1.0.0.zipみたいな感じ)ブラウザによってはブロックするかもしれないので注意。<br>導入時の最新バージョンを入れてください。
-<img width="944" height="470" alt="image" src="https://github.com/user-attachments/assets/c187fa9b-e4e1-4575-a2e6-fd8e6a31856d" />  
-上の画像はv1.0.0の場合の例です。導入時の最新バージョンを選択してください。  
+1. [Releases](https://github.com/kazumasa200/BunnyGarden2FixMod/releases/latest)から最新のzipファイルをダウンロードする。(BunnyGarden2FixMod_v1.0.6.1_BepInEx5.zipみたいな感じ)ブラウザによってはブロックするかもしれないので注意。<br>導入時の最新バージョンを入れてください。
+<img width="983" height="709" alt="image" src="https://github.com/user-attachments/assets/1ce21405-2b6b-47b4-a32f-d9fce95f76c5" />
+
+上の画像はv1.0.6.1の場合の例です。導入時の最新バージョンを選択してください。  
+> [!NOTE]
+> BepInEx5とBepInEx6のどっちを入れるか迷った場合や、Modの導入が初めての方はBepInEx5とついた方をダウンロードしてください。  
+> 以下の手順はBepInEx5版を前提につくっています。  
 
 2. [BepInEx5](https://github.com/bepinex/bepinex/releases)をダウンロードする。Windowsの場合もSteam Deckの場合も```BepInEx_win_x64_{バージョン名}.zip```をダウンロードする。
 
