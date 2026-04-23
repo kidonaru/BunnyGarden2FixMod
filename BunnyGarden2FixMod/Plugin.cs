@@ -1,6 +1,8 @@
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
+using System;
+using System.IO;
 
 #if BIE6
 using BepInEx.Unity.Mono;
@@ -69,6 +71,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<float> ConfigControllerTriggerDeadzone;
     public static ConfigEntry<bool> ConfigHideGameUiInFreeCam;
     public static ConfigEntry<Key> ConfigTimeStopToggleKey;
+    public static ConfigEntry<Key> ConfigScreenshotKey;
     public static ConfigEntry<bool> ConfigCheatEnabled;
     public static ConfigEntry<bool> ConfigUltimateSurvivorEnabled;
     public static ConfigEntry<bool> ConfigGambleAlwaysWinEnabled;
@@ -85,6 +88,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<ControllerHotkeyButton> ConfigControllerFreeCamToggle;
     public static ConfigEntry<ControllerHotkeyButton> ConfigControllerFixedFreeCamToggle;
     public static ConfigEntry<ControllerHotkeyButton> ConfigControllerTimeStopToggle;
+    public static ConfigEntry<ControllerHotkeyButton> ConfigControllerScreenshotToggle;
 
     private GameObject freeCamObject;
     private Camera freeCam;
@@ -95,8 +99,11 @@ public class Plugin : BaseUnityPlugin
     private bool isGameUiSuppressed;
     private float previousTimeScale = 1f;
     private bool isFreeCamOverlayVisible = true;
+    private bool isCapturingScreenshot;
     private static float suppressGameInputUntilUnscaledTime = -1f;
     private const float ControllerShortcutSuppressDuration = 0.18f;
+    private static readonly string ScreenshotDirectory = Path.Combine(Paths.BepInExRootPath, "screenshots",
+        MyPluginInfo.PLUGIN_GUID);
     public static bool isFreeCamActive = false;
     public static bool isFixedFreeCam = false;
     public static bool isTimeStopped = false;
@@ -172,6 +179,12 @@ public class Plugin : BaseUnityPlugin
             Key.T,
             "フリーカメラ中の時間停止 ON/OFF に使うキーボードキー。既定 T。");
 
+        ConfigScreenshotKey = Config.Bind(
+            "Camera",
+            "ScreenshotKey",
+            Key.P,
+            "フリーカメラ中のスクリーンショット保存に使うキーボードキー。既定 P。");
+
         ConfigControllerEnabled = Config.Bind(
             "Camera",
             "ControllerEnabled",
@@ -201,6 +214,12 @@ public class Plugin : BaseUnityPlugin
             "ControllerToggleTimeStop",
             ControllerHotkeyButton.B,
             "フリーカメラ中の時間停止 ON/OFF に使うコントローラボタン。既定 B。");
+
+        ConfigControllerScreenshotToggle = Config.Bind(
+            "Camera",
+            "ControllerToggleScreenshot",
+            ControllerHotkeyButton.A,
+            "フリーカメラ中のスクリーンショット保存に使うコントローラボタン。既定 A。");
 
         ConfigDisableStockings = Config.Bind(
             "Appearance",
@@ -325,6 +344,9 @@ public class Plugin : BaseUnityPlugin
         if (isFreeCamActive && Keyboard.current?[ConfigTimeStopToggleKey.Value].wasPressedThisFrame == true)
             ToggleTimeStop();
 
+        if (isFreeCamActive && Keyboard.current?[ConfigScreenshotKey.Value].wasPressedThisFrame == true)
+            CaptureFreeCamScreenshot();
+
         RefreshGameUiSuppression();
 
         if (!ConfigControllerEnabled.Value)
@@ -354,6 +376,12 @@ public class Plugin : BaseUnityPlugin
             SuppressGameInputTemporarily();
             ToggleTimeStop();
         }
+
+        if (isFreeCamActive && IsControllerButtonTriggered(ConfigControllerScreenshotToggle.Value))
+        {
+            SuppressGameInputTemporarily();
+            CaptureFreeCamScreenshot();
+        }
     }
 
     private void OnGUI()
@@ -365,6 +393,7 @@ public class Plugin : BaseUnityPlugin
             ConfigControllerFreeCamToggle.Value);
         string controllerFixedLabel = ConfigControllerFixedFreeCamToggle.Value.ToString();
         string controllerTimeStopLabel = ConfigControllerTimeStopToggle.Value.ToString();
+        string controllerScreenshotLabel = ConfigControllerScreenshotToggle.Value.ToString();
 
         GUI.color = Color.green;
         GUI.Label(new Rect(10, 10, 1200, 30),
@@ -375,8 +404,11 @@ public class Plugin : BaseUnityPlugin
         GUI.color = Color.cyan;
         GUI.Label(new Rect(10, 70, 900, 30),
             $"Time Stop: {(isTimeStopped ? "ON" : "OFF")} (T / {controllerTimeStopLabel}=TOGGLE)");
+        GUI.color = Color.magenta;
+        GUI.Label(new Rect(10, 100, 900, 30),
+            $"Screenshot: {ConfigScreenshotKey.Value} / {controllerScreenshotLabel}=SAVE PNG");
         GUI.color = Color.white;
-        GUI.Label(new Rect(10, 100, 1300, 30),
+        GUI.Label(new Rect(10, 130, 1300, 30),
             "Move: Arrow/WASD or Left Stick, Up/Down: E/Q or ZR/ZL, Look: Mouse or Right Stick, Speed: Shift/Ctrl or R/L");
         GUI.color = Color.white;
     }
@@ -475,6 +507,75 @@ public class Plugin : BaseUnityPlugin
 
         Time.timeScale = previousTimeScale;
         isTimeStopped = false;
+    }
+
+    private void CaptureFreeCamScreenshot()
+    {
+        if (!isFreeCamActive || freeCam == null || isCapturingScreenshot)
+            return;
+
+        StartCoroutine(CaptureFreeCamScreenshotCoroutine());
+    }
+
+    private System.Collections.IEnumerator CaptureFreeCamScreenshotCoroutine()
+    {
+        isCapturingScreenshot = true;
+        Camera captureCam = freeCam;
+        yield return new WaitForEndOfFrame();
+
+        if (!isFreeCamActive || captureCam == null)
+        {
+            isCapturingScreenshot = false;
+            yield break;
+        }
+
+        string path = null;
+        RenderTexture rt = null;
+        Texture2D tex = null;
+        RenderTexture previousActive = RenderTexture.active;
+        RenderTexture previousTarget = captureCam.targetTexture;
+
+        try
+        {
+            int width = Mathf.Max(1, captureCam.pixelWidth);
+            int height = Mathf.Max(1, captureCam.pixelHeight);
+
+            Directory.CreateDirectory(ScreenshotDirectory);
+            path = Path.Combine(ScreenshotDirectory,
+                $"freecam_{DateTime.Now:yyyyMMdd_HHmmss_fff}.png");
+
+            rt = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32);
+            tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
+
+            captureCam.targetTexture = rt;
+            captureCam.Render();
+
+            RenderTexture.active = rt;
+            tex.ReadPixels(new Rect(0f, 0f, width, height), 0, 0);
+            tex.Apply(false, false);
+
+            File.WriteAllBytes(path, ImageConversion.EncodeToPNG(tex));
+            PatchLogger.LogInfo($"フリーカメラスクリーンショットを保存しました: {path}");
+        }
+        catch (Exception ex)
+        {
+            PatchLogger.LogError($"フリーカメラスクリーンショット保存失敗: {ex.Message}");
+        }
+        finally
+        {
+            if (captureCam != null)
+                captureCam.targetTexture = previousTarget;
+
+            RenderTexture.active = previousActive;
+
+            if (rt != null)
+                Destroy(rt);
+
+            if (tex != null)
+                Destroy(tex);
+
+            isCapturingScreenshot = false;
+        }
     }
 
     private void CreateFreeCam()
