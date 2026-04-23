@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 
 namespace BunnyGarden2FixMod.Utils;
@@ -49,11 +51,11 @@ internal static class SteamLaunchChecker
 
         try
         {
-            // 再起動試行を記録してループを防止
-            WriteRelaunchGuard();
-
             var url = $"steam://rungameid/{SteamAppId}";
             Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+
+            // Process.Start 成功後にガードを書き込む（失敗時は30秒ロックを回避）
+            WriteRelaunchGuard();
             return true;
         }
         catch (Exception ex)
@@ -78,7 +80,9 @@ internal static class SteamLaunchChecker
         try
         {
             var gameRoot = Path.GetDirectoryName(Application.dataPath) ?? string.Empty;
-            var checkDirs = new[] { gameRoot, Directory.GetCurrentDirectory() };
+            var checkDirs = new[] { gameRoot, Directory.GetCurrentDirectory() }
+                .Where(d => !string.IsNullOrEmpty(d))
+                .Distinct(StringComparer.OrdinalIgnoreCase);
 
             foreach (var dir in checkDirs)
             {
