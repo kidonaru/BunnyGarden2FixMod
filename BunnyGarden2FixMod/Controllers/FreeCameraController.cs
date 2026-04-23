@@ -6,6 +6,8 @@ namespace BunnyGarden2FixMod.Controllers;
 
 public class FreeCameraController : MonoBehaviour
 {
+    private const float ControllerLookScale = 18f;
+    private const float StickDeadzoneSqr = 0.01f;
     private float rotationH;
     private float rotationV;
     private bool useMouseView = true;
@@ -36,11 +38,26 @@ public class FreeCameraController : MonoBehaviour
             rotationV -= mouseDelta.y * sensitivity * Time.deltaTime;
         }
 
+        Vector2 rightStick = Plugin.ReadControllerRightStick();
+        if (rightStick.sqrMagnitude > StickDeadzoneSqr)
+        {
+            float sensitivity = Plugin.ConfigSensitivity.Value * ControllerLookScale;
+            rotationH += rightStick.x * sensitivity * Time.deltaTime;
+            rotationV -= rightStick.y * sensitivity * Time.deltaTime;
+        }
+
         rotationV = Mathf.Clamp(rotationV, -90f, 90f);
         transform.rotation = Quaternion.AngleAxis(rotationH, Vector3.up);
         transform.rotation *= Quaternion.AngleAxis(rotationV, Vector3.right);
 
         float speed = Plugin.ConfigSpeed.Value;
+        if (Plugin.ConfigControllerEnabled.Value)
+        {
+            if (Plugin.IsControllerButtonHeld(ControllerHotkeyButton.R))
+                speed = Plugin.ConfigFastSpeed.Value;
+            else if (Plugin.IsControllerButtonHeld(ControllerHotkeyButton.L))
+                speed = Plugin.ConfigSlowSpeed.Value;
+        }
 
         if (Keyboard.current != null)
         {
@@ -60,6 +77,21 @@ public class FreeCameraController : MonoBehaviour
             if (Keyboard.current.qKey.isPressed)
                 transform.position += speed * Time.deltaTime * Vector3.up;
             if (Keyboard.current.eKey.isPressed)
+                transform.position += speed * Time.deltaTime * Vector3.down;
+        }
+
+        if (Plugin.ConfigControllerEnabled.Value)
+        {
+            Vector2 leftStick = Plugin.ReadControllerLeftStick();
+            if (leftStick.sqrMagnitude > StickDeadzoneSqr)
+            {
+                transform.position += speed * Time.deltaTime * transform.forward * leftStick.y;
+                transform.position += speed * Time.deltaTime * transform.right * leftStick.x;
+            }
+
+            if (Plugin.IsControllerButtonHeld(ControllerHotkeyButton.ZR))
+                transform.position += speed * Time.deltaTime * Vector3.up;
+            if (Plugin.IsControllerButtonHeld(ControllerHotkeyButton.ZL))
                 transform.position += speed * Time.deltaTime * Vector3.down;
         }
 
