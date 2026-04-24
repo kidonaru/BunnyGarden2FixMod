@@ -106,4 +106,6 @@
       <Private>false</Private>
     </Reference>
   </ItemGroup>
+
+  <Import Project="BunnyGarden2FixMod.user.targets" Condition="Exists('BunnyGarden2FixMod.user.targets')" />
 </Project>
