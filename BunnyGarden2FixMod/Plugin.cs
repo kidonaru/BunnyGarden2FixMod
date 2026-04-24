@@ -393,7 +393,7 @@ public class Plugin : BaseUnityPlugin
             "HideUI",
             "HideInSpecialScenes",
             true,
-            "true にすると旅行シーンおよびラストシーンで雰囲気をぶち壊す\n" +
+            "true にすると旅行シーンおよび特別なシーンで雰囲気をぶち壊す\n" +
             "所持金UIを非表示にします。F9パネルまたはこのコンフィグでON/OFFできます。");
 
         ConfigHideButtonGuide = Config.Bind(

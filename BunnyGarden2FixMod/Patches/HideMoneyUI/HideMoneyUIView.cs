@@ -21,8 +21,11 @@ public class HideMoneyUIView : MonoBehaviour
     }
 
     public event Action OnCloseClicked;
+
     public event Action OnToggleMoneyHide;
+
     public event Action OnToggleButtonGuide;
+
     public event Action OnToggleLikabilityGauge;
 
     private UIDocument m_doc;
@@ -75,7 +78,7 @@ public class HideMoneyUIView : MonoBehaviour
             m_listContainer.Remove(m_listContainer[0]);
 
         // 行1: 所持金非表示
-        var row1 = BuildSettingRow("旅行・告白シーンで所持金を非表示", data.HideMoneyInSpecialScenes);
+        var row1 = BuildSettingRow("旅行・特別なシーンで所持金を非表示", data.HideMoneyInSpecialScenes);
         row1.RegisterCallback<ClickEvent>(_ => OnToggleMoneyHide?.Invoke());
         m_listContainer.Add(row1);
 
