@@ -67,6 +67,7 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> ConfigExtraActive;
     public static ConfigEntry<int> ConfigFrameRate;
     public static ConfigEntry<AntiAliasingType> ConfigAntiAliasing;
+    public static ConfigEntry<bool> ConfigDisableChromaticAberration;
     public static ConfigEntry<float> ConfigSensitivity;
     public static ConfigEntry<float> ConfigSpeed;
     public static ConfigEntry<float> ConfigFastSpeed;
@@ -164,6 +165,12 @@ public class Plugin : BaseUnityPlugin
             "AntiAliasingType",
             AntiAliasingType.MSAA8x,
             "アンチエイリアシングの種類を指定します。右の方ほど画質が良くなりますが、動作が重くなります。Off / FXAA / TAA / MSAA2x / MSAA4x / MSAA8x");
+
+        ConfigDisableChromaticAberration = Config.Bind(
+            "ChromaticAberration",
+            "DisableChromaticAberration",
+            false,
+            "true にするとクロマティックアバレーション（色収差）エフェクトを無効化します。");
 
         ConfigSensitivity = Config.Bind(
             "Camera",
