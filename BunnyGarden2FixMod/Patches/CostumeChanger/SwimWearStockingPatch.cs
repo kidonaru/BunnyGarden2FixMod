@@ -49,9 +49,18 @@ public static class SwimWearStockingPatch
 
     private static readonly Dictionary<int, SwimwearBackup> s_backups = new();
 
-    // (swimMeshInstanceId, charId, isKneeSocks) → nearest-neighbor 移植済みメッシュ
-    // isKneeSocks=true の場合は skin_kneehigh ドナーも含めて移植するため、キーに含める
-    private static readonly Dictionary<(int, int, bool), Mesh> s_transplantedCache = new();
+    // (swimMeshInstanceId, charId, isKneeSocks, shapeFalloffQ) → nearest-neighbor 移植済みメッシュ
+    // isKneeSocks=true の場合は skin_kneehigh ドナーも含めて移植する。
+    // shapeFalloffQ は ConfigStockingShapeFalloffRadius を 0.1mm 量子化した値で、
+    // skin_stocking 系 blendShape の per-vertex フェード量に応じて別キャッシュを保持する。
+    private static readonly Dictionary<(int, int, bool, int), Mesh> s_transplantedCache = new();
+
+    // (donorMeshInstanceId, swimSkinMeshInstanceId, isKneeSocks, x_q, y_q, f_q)
+    // → 食い込み解消済みの (donor stocking, swim skin) ペア。MeshPenetrationResolver の出力をキャッシュ。
+    private static readonly Dictionary<(int, int, bool, int, int, int), (Mesh donor, Mesh skin)> s_resolvedCache = new();
+
+    // resolve 適用済み Mesh の InstanceID。SMR が既に補正済 mesh を持っている場合の二重補正防止。
+    private static readonly System.Collections.Generic.HashSet<int> s_resolvedAppliedIds = new();
 
     static bool Prepare()
     {
@@ -77,8 +86,48 @@ public static class SwimWearStockingPatch
             }
         }
         s_transplantedCache.Clear();
+
+        int resolvedDestroyed = 0;
+        foreach (var pair in s_resolvedCache.Values)
+        {
+            if (pair.donor != null) { Object.Destroy(pair.donor); resolvedDestroyed++; }
+            if (pair.skin != null) { Object.Destroy(pair.skin); resolvedDestroyed++; }
+        }
+        s_resolvedCache.Clear();
+        s_resolvedAppliedIds.Clear();
+
+        // s_backups.LowerOriginalMesh / LowerFootOriginalMesh はゲーム本体所有の sharedMesh のため
+        // Destroy せず参照のみクリアする（Destroy するとゲーム側のメッシュが消えて破綻する）。
         s_backups.Clear();
-        PatchLogger.LogInfo($"[SwimWearStockingPatch] シーンアンロード: transplanted mesh {destroyed} 件破棄、キャッシュクリア");
+        PatchLogger.LogInfo($"[SwimWearStockingPatch] シーンアンロード: transplanted {destroyed} 件、resolved {resolvedDestroyed} 件破棄");
+    }
+
+    /// <summary>
+    /// チューニングスライダー等から ConfigStockingOffset/SkinShrink/FalloffRadius を変更した直後に呼び、
+    /// 次の env.ApplyStockings() で食い込み解消が新パラメータで再構築されるよう状態を整える。
+    ///
+    /// 復元手順:
+    ///   1. swim skin の sharedMesh を backup originalMesh に戻す（次の TransplantInto が
+    ///      vanilla skin から transplanted を構築できるようにする）
+    ///   2. s_resolvedAppliedIds をクリア（ApplyPenetrationResolve の二重補正防止 early-return を解除）
+    ///
+    /// s_resolvedCache / s_transplantedCache は破棄しない:
+    ///   - resolvedCache キーには量子化パラメータが含まれるので、別パラメータでは別エントリが作られる。
+    ///     同一パラメータに戻したときの再ヒットを許容するためそのまま保持する（OnSceneUnloaded で一括破棄）。
+    ///   - 注入 stockings smr の sharedMesh は ApplyStockingSync 冒頭で donor.sharedMesh に
+    ///     必ず差し戻されるため、ここで触らなくて良い。
+    /// </summary>
+    internal static void InvalidateForReapply(CharID id)
+    {
+        int key = (int)id;
+        if (s_backups.TryGetValue(key, out var backup))
+        {
+            if (backup.LowerSmr != null && backup.LowerOriginalMesh != null)
+                backup.LowerSmr.sharedMesh = backup.LowerOriginalMesh;
+            if (backup.LowerFootSmr != null && backup.LowerFootOriginalMesh != null)
+                backup.LowerFootSmr.sharedMesh = backup.LowerFootOriginalMesh;
+        }
+        s_resolvedAppliedIds.Clear();
     }
 
     private static bool Prefix(CharacterHandle __instance, int __0)
@@ -228,8 +277,62 @@ public static class SwimWearStockingPatch
 
         ApplyBlendShapeTransplant(handle, chara, renderers, 100f, isKneeSocks);
 
+        // donor stocking と swim skin の食い込みを 1 パスで検出し、両側に push して z-fighting を解消
+        var swimLowerForRef = renderers.FirstOrDefault(m => m.name == "mesh_skin_lower");
+        ApplyPenetrationResolve(smr, swimLowerForRef, renderers, isKneeSocks);
+
         PatchLogger.LogInfo($"[SwimWearStockingPatch] 適用: {handle.GetCharID()} override={overrideType} knee={isKneeSocks} created={created} meshVerts={targetMesh.vertexCount} bones={smr.bones?.Length ?? 0}");
         return true;
+    }
+
+    /// <summary>
+    /// donor stocking と swim skin の食い込みを 1 パスで検出し、両側へ押し出して解消する。
+    /// 食い込み点でのみ skin 頂点を内側へ push するため、一様 shrink と違い境界で段差が出ない。
+    /// 結果ペアは s_resolvedCache にキャッシュ。
+    /// </summary>
+    private static void ApplyPenetrationResolve(SkinnedMeshRenderer stockingsSmr, SkinnedMeshRenderer swimLower, SkinnedMeshRenderer[] renderers, bool isKneeSocks)
+    {
+        if (stockingsSmr == null || stockingsSmr.sharedMesh == null) return;
+        if (swimLower == null || swimLower.sharedMesh == null) return;
+
+        // ニーハイは形状・カバー範囲が異なり本補正の前提（尻まわりの z-fighting）と合わないため対象外
+        if (isKneeSocks) return;
+
+        float minOffset = Plugin.ConfigStockingOffset?.Value ?? 0f;
+        float skinPushAmount = Plugin.ConfigStockingSkinShrink?.Value ?? 0f;
+        float falloffRadius = Plugin.ConfigStockingSkinFalloffRadius?.Value ?? 0f;
+        if (minOffset <= 0f && skinPushAmount <= 0f) return;
+
+        var currentDonor = stockingsSmr.sharedMesh;
+        var currentSkin = swimLower.sharedMesh;
+
+        // 二重補正防止
+        if (s_resolvedAppliedIds.Contains(currentDonor.GetInstanceID())) return;
+
+        // 量子化キー: 0.1mm precision (max 0.01m → 100、int で十分収まる)
+        int xQ = Mathf.RoundToInt(minOffset * 10_000f);
+        int yQ = Mathf.RoundToInt(skinPushAmount * 10_000f);
+        int fQ = Mathf.RoundToInt(falloffRadius * 10_000f);
+        var cacheKey = (currentDonor.GetInstanceID(), currentSkin.GetInstanceID(), isKneeSocks, xQ, yQ, fQ);
+
+        if (!s_resolvedCache.TryGetValue(cacheKey, out var pair))
+        {
+            var skinAnchorVerts = CollectShrinkAnchorVerts(renderers);
+
+            pair = MeshPenetrationResolver.Resolve(
+                currentDonor, currentSkin,
+                "blendShape_skin_lower.skin_stocking",
+                minOffset, skinPushAmount,
+                skinAnchorVerts, falloffRadius,
+                "SwimWearStockingPatch");
+
+            s_resolvedCache[cacheKey] = pair;
+            if (pair.donor != null) s_resolvedAppliedIds.Add(pair.donor.GetInstanceID());
+            if (pair.skin != null) s_resolvedAppliedIds.Add(pair.skin.GetInstanceID());
+        }
+
+        if (pair.donor != null) stockingsSmr.sharedMesh = pair.donor;
+        if (pair.skin != null) swimLower.sharedMesh = pair.skin;
     }
 
     private static void ApplyBlendShapeTransplant(CharacterHandle handle, GameObject chara, SkinnedMeshRenderer[] renderers, float shrinkWeight, bool isKneeSocks)
@@ -252,16 +355,61 @@ public static class SwimWearStockingPatch
             s_backups[key] = backup;
         }
 
-        TransplantInto(swimLower, lowerDonor.sharedMesh, key, shrinkWeight, isKneeSocks, ref backup.LowerSmr, ref backup.LowerOriginalMesh);
-        TransplantInto(swimLowerFoot, lowerDonor.sharedMesh, key, shrinkWeight, isKneeSocks, ref backup.LowerFootSmr, ref backup.LowerFootOriginalMesh);
+        // skin_stocking 系 blendShape の per-vertex フェード設定（KneeSocks では skin_kneehigh が
+        // 主体になるためスキップ）
+        Vector3[] shapeAnchorVerts = null;
+        float shapeFalloffRadius = 0f;
+        if (!isKneeSocks)
+        {
+            shapeFalloffRadius = Plugin.ConfigStockingShapeFalloffRadius?.Value ?? 0f;
+            if (shapeFalloffRadius > 0f) shapeAnchorVerts = CollectShrinkAnchorVerts(renderers);
+        }
+
+        TransplantInto(swimLower, lowerDonor.sharedMesh, key, shrinkWeight, isKneeSocks, shapeAnchorVerts, shapeFalloffRadius, ref backup.LowerSmr, ref backup.LowerOriginalMesh);
+        TransplantInto(swimLowerFoot, lowerDonor.sharedMesh, key, shrinkWeight, isKneeSocks, shapeAnchorVerts, shapeFalloffRadius, ref backup.LowerFootSmr, ref backup.LowerFootOriginalMesh);
+    }
+
+    private static readonly System.Collections.Generic.HashSet<string> s_shrinkTargetNames = new()
+    {
+        "mesh_skin_lower",
+        "mesh_skin_lower_foot",
+    };
+
+    /// <summary>
+    /// shrink 対象（mesh_skin_lower / mesh_skin_lower_foot）以外の skin 系メッシュの頂点を集める。
+    /// 同一キャラ配下で sibling SMR は共通の mesh-local 座標系を持つ前提で、頂点を直接連結する。
+    /// </summary>
+    private static Vector3[] CollectShrinkAnchorVerts(SkinnedMeshRenderer[] renderers)
+    {
+        var list = new System.Collections.Generic.List<Vector3>();
+        foreach (var r in renderers)
+        {
+            if (r == null || r.sharedMesh == null) continue;
+            if (!r.name.StartsWith("mesh_skin_")) continue;
+            if (s_shrinkTargetNames.Contains(r.name)) continue;
+            list.AddRange(r.sharedMesh.vertices);
+        }
+        return list.ToArray();
     }
 
     private static void TransplantInto(SkinnedMeshRenderer target, Mesh donorMesh, int charKey, float shrinkWeight, bool isKneeSocks,
+        Vector3[] shapeAnchorVerts, float shapeFalloffRadius,
         ref SkinnedMeshRenderer backupSmr, ref Mesh backupOriginal)
     {
         if (target == null || target.sharedMesh == null) return;
 
-        var cacheKey = (target.sharedMesh.GetInstanceID(), charKey, isKneeSocks);
+        // 過去の override から残っている transplanted/resolved mesh を vanilla に戻す。
+        // 戻さないと cache key が「以前の transplanted ID」になり、その mesh を base に
+        // 二重 transplant してしまう（例: ニーハイ→パンスト時に skin_kneehigh delta が
+        // 残った状態の上に skin_stocking 系を載せてしまい、Resolve の reference 表面が狂う）。
+        if (backupOriginal != null && target.sharedMesh != backupOriginal)
+        {
+            target.sharedMesh = backupOriginal;
+        }
+
+        // shape falloff 量子化キー (0.1mm 精度, max 0.01m → 100)
+        int shapeFalloffQ = Mathf.RoundToInt(shapeFalloffRadius * 10_000f);
+        var cacheKey = (target.sharedMesh.GetInstanceID(), charKey, isKneeSocks, shapeFalloffQ);
 
         if (!s_transplantedCache.TryGetValue(cacheKey, out var transplanted) || transplanted == null)
         {
@@ -269,6 +417,13 @@ public static class SwimWearStockingPatch
             // ここでは target.sharedMesh が元の mesh（swim 生）であることを期待
             transplanted = BuildTransplantedMesh(target.sharedMesh, donorMesh, isKneeSocks);
             if (transplanted == null) return;
+
+            // skin_stocking 系 blendShape を per-vertex でフェード（mesh_skin_upper 等の境界で段差を解消）
+            if (shapeFalloffRadius > 0f && shapeAnchorVerts != null && !isKneeSocks)
+            {
+                BlendShapeFalloffApplier.Apply(transplanted, s_transplantShapeNames, shapeAnchorVerts, shapeFalloffRadius, "SwimWearStockingPatch");
+            }
+
             s_transplantedCache[cacheKey] = transplanted;
         }
 
@@ -312,7 +467,7 @@ public static class SwimWearStockingPatch
     {
         if (!isKneeSocks)
         {
-            // isKneeSocks=false: 既存どおり単一ドナー（Uniform）から skin_stocking 系のみ移植
+            // isKneeSocks=false: 単一ドナー（Uniform）から skin_stocking 系のみ移植
             return MeshBlendShapeTransplanter.Transplant(targetMesh, donorMesh, s_transplantShapeNames, "SwimWearStockingPatch");
         }
 
@@ -385,7 +540,7 @@ public static class SwimWearStockingPatch
             target.rootBone = fallback;
 
         if (missing > 0)
-            PatchLogger.LogWarning($"[SwimWearStockingPatch] bone 未対応 {missing}/{src.Length}");
+            PatchLogger.LogInfo($"[SwimWearStockingPatch] bone 未対応 {missing}/{src.Length}");
     }
 
     /// <summary>
@@ -404,7 +559,7 @@ public static class SwimWearStockingPatch
                 collisions++;
         }
         if (collisions > 0)
-            PatchLogger.LogWarning($"[SwimWearStockingPatch] bone 名衝突 {collisions} 件を先勝ちで無視 (chara={chara.name})");
+            PatchLogger.LogInfo($"[SwimWearStockingPatch] bone 名衝突 {collisions} 件を先勝ちで無視 (chara={chara.name})");
         return dict;
     }
 }
