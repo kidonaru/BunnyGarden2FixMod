@@ -67,21 +67,11 @@ internal static class MeshBlendShapeTransplanter
 
             // このドナー用 nearest-neighbor 索引: targetVert[i] → donorVert の最近傍 index
             long nearestStart = sw.ElapsedMilliseconds;
+            var grid = new SpatialGridIndex(donorVerts);
             var nearestMap = new int[targetVerts.Length];
             for (int i = 0; i < targetVerts.Length; i++)
             {
-                float minD = float.MaxValue;
-                int minJ = 0;
-                var tv = targetVerts[i];
-                for (int j = 0; j < donorVerts.Length; j++)
-                {
-                    var dx = donorVerts[j].x - tv.x;
-                    var dy = donorVerts[j].y - tv.y;
-                    var dz = donorVerts[j].z - tv.z;
-                    float sq = dx * dx + dy * dy + dz * dz;
-                    if (sq < minD) { minD = sq; minJ = j; }
-                }
-                nearestMap[i] = minJ;
+                nearestMap[i] = grid.FindNearest(targetVerts[i]);
             }
             nearestMsTotal += sw.ElapsedMilliseconds - nearestStart;
 
