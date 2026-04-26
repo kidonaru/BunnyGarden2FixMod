@@ -5,6 +5,14 @@ namespace BunnyGarden2FixMod.ConfigGen;
 public class SectionDef
 {
     public string Section { get; set; } = "";
+    /// <summary>docs/configs.md 出力用の表示名。省略時は <see cref="Section"/> をそのまま使う。</summary>
+    public string? Name { get; set; }
+    /// <summary>docs/configs.md でテーブル直前に挿入する Markdown 本文（任意）。</summary>
+    public string? Header { get; set; }
+    /// <summary>docs/configs.md でテーブル直後に挿入する Markdown 本文（任意）。</summary>
+    public string? Footer { get; set; }
+    /// <summary>true ならこのセクションを docs/configs.md から除外する（C# 生成には影響しない）。</summary>
+    public bool Hidden { get; set; }
     public List<ConfigEntryDef> Configs { get; set; } = new();
 }
 

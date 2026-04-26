@@ -7,6 +7,7 @@
 # type=hotkey は controllerDescription を任意指定でき、Gamepad エントリのみに追記される。
 
 - section: Graphics
+  name: 解像度・フレームレート・グラフィック
   configs:
     - name: Width
       label: 解像度幅
@@ -70,6 +71,7 @@
         kind: toggle
 
 - section: Internal
+  hidden: true
   configs:
     - name: ExtraActive
       label: 拡張解像度の使用状態（内部）
@@ -80,6 +82,35 @@
         ゲーム内オプション操作時に自動更新されます。手動変更しないでください。
 
 - section: Camera
+  name: フリーカメラ
+  footer: |
+    フリーカメラは **F5** キーで ON/OFF、**F6** キーでカメラ固定のトグルができます。
+    コントローラーの既定操作は **Select + Y** で ON/OFF、フリーカメラ中は **Select + X** で固定切り替え、**Select + B** で時間停止、**Select + A** でスクリーンショット保存です。
+    オーバーレイ表示は **F12** または **Select + Start** で表示／非表示を切り替えられます。
+
+    #### フリーカメラ操作
+
+    | 入力 | 動作 |
+    |------|------|
+    | **WASD / 矢印キー** | 前後左右に移動 |
+    | **Q / E** | 上下に移動 |
+    | **Shift / Ctrl** | 高速移動 / 低速移動 |
+    | **マウス** | 視点移動 |
+    | **T** | 時間停止 ON / OFF |
+    | **F** | 時間停止中に 1 フレーム進める |
+    | **G** | 押している間だけ早送り（ホールド） |
+    | **P** | スクリーンショットを PNG 保存（ゲーム UI・オーバーレイなし） |
+    | **F12** | オーバーレイ表示 ON / OFF |
+    | **左スティック** | 前後左右に移動 |
+    | **右スティック** | 視点移動 |
+    | **ZL / ZR** | 下 / 上に移動 |
+    | **L / R** | 低速移動 / 高速移動 |
+    | **Select + X** | 固定モード ON / OFF |
+    | **Select + B** | 時間停止 ON / OFF |
+    | **Select + A** | スクリーンショットを PNG 保存 |
+    | **Select + Start** | オーバーレイ表示 ON / OFF |
+
+    > **注意**: フリーカメラ中は誤操作を避けるため、既定ではゲーム本体の UI を自動で隠します。終了確認や確認ダイアログが表示された場合は、自動的に UI が復帰し、終了確認ではフリーカメラも自動解除されます。固定モード中は時間停止を有効化できません。スクリーンショットは `BepInEx/screenshots/net.noeleve.BunnyGarden2FixMod/` に PNG で保存されます。
   configs:
     - name: Sensitivity
       label: 感度
@@ -162,6 +193,7 @@
       controllerDescription: ControllerModifier と同時押しが必要です。
 
 - section: Animation
+  name: アニメーション
   configs:
     - name: MoreTalkReactions
       label: 会話リアクションを多様化
@@ -173,6 +205,7 @@
         category: Game
 
 - section: Input
+  name: コントローラー入力
   configs:
     - name: ControllerTriggerDeadzone
       label: コントローラ ZL/ZR デッドゾーン
@@ -194,6 +227,7 @@
         ホットキーの同時押し用。ゲーム本来のコントローラー操作との競合回避に使用します。
 
 - section: Appearance
+  name: 外見
   configs:
     - name: DisableStockings
       label: パンストを無効化
@@ -205,6 +239,7 @@
         category: CostumeChanger
 
 - section: Conversation
+  name: 会話
   configs:
     - name: ContinueVoiceOnTap
       label: タップでボイスを継続
@@ -218,6 +253,7 @@
         category: Game
 
 - section: Cheki
+  name: チェキ高解像度保存
   configs:
     - name: ChekiHighResEnabled
       label: 高解像度チェキを有効化
@@ -274,6 +310,7 @@
         format: '{0}'
 
 - section: Ending
+  name: エンディング
   configs:
     - name: EndingChekiSlideshow
       label: エンディングでチェキスライドショー
@@ -286,6 +323,25 @@
         category: Cheki
 
 - section: Cheat
+  name: チート
+  footer: |
+    #### キャスト出勤順変更の操作方法
+
+    config で `CastOrder = true` にした上で、ホール画面（バーに入る前）で操作します。
+
+    | キー | 動作 |
+    |------|------|
+    | **F1** | 編集モード 開始 / 終了 |
+    | **W / ↑** | 選択を上に移動 |
+    | **S / ↓** | 選択を下に移動 |
+    | **1〜6** キー（1回目） | そのキャストを選択（黄色表示） |
+    | **1〜6** キー（2回目） | 選択中のキャストと入れ替え |
+    | **Esc** | 編集モードを終了 |
+
+    - 画面右上にキャストの現在の並び順が表示されます
+    - パネル下部の「**順番を固定する**」チェックボックスをクリックすると、`UpdateTodaysCastOrder` による自動並び替えを無効化できます（固定中は数字キーでの入れ替えも無効）
+    - バーに入店した後は変更できません（自動的に編集モードが終了します）
+    - 日付が変わった場合も自動的に編集モードが終了します
   configs:
     - name: CastOrder
       label: キャスト出勤順序変更
@@ -333,6 +389,28 @@
         kind: toggle
 
 - section: CostumeChanger
+  name: 衣装変更
+  header: |
+    F7 キー（既定）で Wardrobe パネルを開き、表示中のキャストの衣装・パンツ・ストッキングを自由に切り替えることができます。DLC 衣装にも対応しています。
+  footer: |
+    #### 操作方法
+
+    Wardrobe パネル表示中、以下のキーで操作できます。
+
+    | キー | 動作 |
+    |------|------|
+    | **A / ←** | 左のタブに切替 |
+    | **D / →** | 右のタブに切替 |
+    | **W / ↑** | 選択を上に移動 |
+    | **S / ↓** | 選択を下に移動 |
+    | **Enter** | 選択したアイテムを適用（既に適用中なら解除） |
+    | **R** | 全タブの override をリセット |
+    | **Esc** | パネルを閉じる |
+    | **マウスクリック** | 行をクリックで即適用・解除。キャスト名をクリックで対象切替 |
+
+    - パネル上のカーソル外にある操作はゲームに素通しされます
+    - フィッティングルーム動作中はパネルを開けません
+    - 複数のキャストが画面に表示されている場合は、パネル上のキャスト名をクリックして対象を切り替えられます
   configs:
     - name: CostumeChangerEnabled
       label: 衣装変更を有効化（要再起動）
@@ -430,6 +508,7 @@
       description: 衣装変更 UI のトグル。
 
 - section: General
+  name: 全般
   configs:
     - name: SteamLaunchCheck
       label: Steam 経由起動を強制
@@ -457,6 +536,24 @@
       controllerDescription: ControllerModifier と同時押しが必要です。
 
 - section: HideUI
+  name: UI 非表示設定
+  header: |
+    **F9** キーで設定パネルを開き、以下を ON/OFF できます。カーソルがパネル上にある間はマウスクリックや移動・視点操作などのゲーム入力はブロックされます。
+  footer: |
+    #### 操作方法（F9 パネル）
+
+    | キー | 動作 |
+    |------|------|
+    | **F9** | パネルを開く / 閉じる |
+    | **行をクリック / Space / Enter** | その行の設定をトグル |
+    | **↑ / ↓** | 行を選択 |
+    | **← / →** | スライダー値の増減 |
+    | **Tab / 1〜9** | カテゴリ切替 |
+    | **Esc** | パネルを閉じる |
+
+    **所持金非表示が適用されるシーン:**
+    - 旅行シーン
+    - 恋愛に関する特別なシーン
   configs:
     - name: HideUIEnabled
       label: F9 設定パネルを有効化
@@ -497,6 +594,7 @@
         kind: toggle
 
 - section: Time
+  name: 時間操作
   configs:
     - name: FastForwardSpeed
       label: 早送り倍率

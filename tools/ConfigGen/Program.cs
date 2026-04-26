@@ -9,7 +9,7 @@ internal static class Program
     {
         try
         {
-            var (yamlPath, outPath) = ParseArgs(args);
+            var (yamlPath, outPath, outMdPath) = ParseArgs(args);
 
             var yaml = File.ReadAllText(yamlPath);
             var deserializer = new DeserializerBuilder()
@@ -50,6 +50,13 @@ internal static class Program
             File.WriteAllText(outPath, generated);
             Console.WriteLine($"[ConfigGen] Wrote {generated.Length} chars to {outPath}");
 
+            if (!string.IsNullOrEmpty(outMdPath))
+            {
+                var md = MarkdownEmitter.Emit(sections);
+                File.WriteAllText(outMdPath, md);
+                Console.WriteLine($"[ConfigGen] Wrote {md.Length} chars to {outMdPath}");
+            }
+
             return 0;
         }
         catch (Exception ex)
@@ -62,16 +69,17 @@ internal static class Program
         }
     }
 
-    private static (string yamlPath, string outPath) ParseArgs(string[] args)
+    private static (string yamlPath, string outPath, string? outMdPath) ParseArgs(string[] args)
     {
-        string? yaml = null, output = null;
+        string? yaml = null, output = null, outputMd = null;
         for (int i = 0; i < args.Length - 1; i++)
         {
             if (args[i] == "--yaml") yaml = args[++i];
             else if (args[i] == "--out") output = args[++i];
+            else if (args[i] == "--out-md") outputMd = args[++i];
         }
         if (yaml == null || output == null)
-            throw new ArgumentException("Usage: ConfigGen --yaml <input.yaml> --out <output.cs>");
-        return (yaml, output);
+            throw new ArgumentException("Usage: ConfigGen --yaml <input.yaml> --out <output.cs> [--out-md <output.md>]");
+        return (yaml, output, outputMd);
     }
 }

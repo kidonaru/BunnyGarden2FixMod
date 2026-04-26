@@ -140,11 +140,13 @@
   <Target Name="GenerateConfigs"
           BeforeTargets="BeforeBuild;CoreCompile"
           Inputs="@(ConfigGenInputs)"
-          Outputs="Generated\Configs.g.cs">
+          Outputs="Generated\Configs.g.cs;..\docs\configs.md">
     <Message Text="[GenerateConfigs] Running ConfigGen..." Importance="high" />
-    <Exec Command="dotnet run --project &quot;$(MSBuildProjectDirectory)\..\tools\ConfigGen\ConfigGen.csproj&quot; -- --yaml &quot;$(MSBuildProjectDirectory)\Configs.yaml&quot; --out &quot;$(MSBuildProjectDirectory)\Generated\Configs.g.cs&quot;"
+    <Exec Command="dotnet run --project &quot;$(MSBuildProjectDirectory)\..\tools\ConfigGen\ConfigGen.csproj&quot; -- --yaml &quot;$(MSBuildProjectDirectory)\Configs.yaml&quot; --out &quot;$(MSBuildProjectDirectory)\Generated\Configs.g.cs&quot; --out-md &quot;$(MSBuildProjectDirectory)\..\docs\configs.md&quot;"
           WorkingDirectory="$(MSBuildProjectDirectory)" />
     <Error Condition="!Exists('Generated\Configs.g.cs')"
            Text="[GenerateConfigs] FAILED: Generated\Configs.g.cs was not produced. Check ConfigGen output above." />
+    <Error Condition="!Exists('..\docs\configs.md')"
+           Text="[GenerateConfigs] FAILED: docs\configs.md was not produced. Check ConfigGen output above." />
   </Target>
 </Project>
