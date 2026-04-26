@@ -155,6 +155,7 @@
       ui:
         kind: toggle
         label: 会話リアクションを多様化
+        category: Game
 
 - section: Input
   configs:
@@ -186,6 +187,7 @@
       ui:
         kind: toggle
         label: パンストを無効化
+        category: CostumeChanger
 
 - section: Conversation
   configs:
@@ -198,6 +200,7 @@
       ui:
         kind: toggle
         label: タップでボイスを継続
+        category: Game
 
 - section: Cheki
   configs:
@@ -266,6 +269,7 @@
       ui:
         kind: toggle
         label: エンディングでチェキスライドショー
+        category: Cheki
 
 - section: Cheat
   configs:
@@ -481,6 +485,7 @@
         label: 早送り倍率
         step: 1
         format: '{0:F0}x'
+        category: Game
 
     - name: TimeStopToggle
       key: ToggleTimeStop

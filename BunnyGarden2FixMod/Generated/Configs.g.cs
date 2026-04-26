@@ -449,7 +449,7 @@ BepInEx/screenshots フォルダに PNG で保存されます。
         },
         new global::BunnyGarden2FixMod.Patches.Settings.UIEntryMeta
         {
-            Category = "Animation",
+            Category = "Game",
             Order    = 80,
             Label    = "会話リアクションを多様化",
             Desc     = "true にすると、バーの背景キャスト2人の会話リアクションモーションがより多様になります。",
@@ -471,7 +471,7 @@ BepInEx/screenshots フォルダに PNG で保存されます。
         },
         new global::BunnyGarden2FixMod.Patches.Settings.UIEntryMeta
         {
-            Category = "Appearance",
+            Category = "CostumeChanger",
             Order    = 100,
             Label    = "パンストを無効化",
             Desc     = "true にするとキャストのストッキングを非表示にします。",
@@ -480,7 +480,7 @@ BepInEx/screenshots フォルダに PNG で保存されます。
         },
         new global::BunnyGarden2FixMod.Patches.Settings.UIEntryMeta
         {
-            Category = "Conversation",
+            Category = "Game",
             Order    = 110,
             Label    = "タップでボイスを継続",
             Desc     = "true にすると会話送り（タップ／オート／スキップ）時にボイスが途中停止せず、\n次の台詞のボイス再生で自然に上書きされるか、ボイスが最後まで再生されるようになります。\n",
@@ -524,7 +524,7 @@ BepInEx/screenshots フォルダに PNG で保存されます。
         },
         new global::BunnyGarden2FixMod.Patches.Settings.UIEntryMeta
         {
-            Category = "Ending",
+            Category = "Cheki",
             Order    = 150,
             Label    = "エンディングでチェキスライドショー",
             Desc     = "true にするとエンディング中に撮影済みのチェキをスライドショーで表示します。",
@@ -666,7 +666,7 @@ BepInEx/screenshots フォルダに PNG で保存されます。
         },
         new global::BunnyGarden2FixMod.Patches.Settings.UIEntryMeta
         {
-            Category = "Time",
+            Category = "Game",
             Order    = 290,
             Label    = "早送り倍率",
             Desc     = "時間を早送りするホットキーを押している間の時間の進む速さの倍率。",
