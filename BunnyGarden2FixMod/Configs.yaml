@@ -4,6 +4,7 @@
 # upstream PR #25 (Refactor Plugin) で section/key が再編成されたため整合済み。
 # label は必須・name 直下。生成コードの XML doc コメントと .cfg description の 1 行目に使われる。
 # description は label の補足として書く（label と重複する見出し的記述は避ける）。
+# type=hotkey は controllerDescription を任意指定でき、Gamepad エントリのみに追記される。
 
 - section: Graphics
   configs:
@@ -137,22 +138,23 @@
         kind: toggle
 
     - name: FreeCamToggle
-      label: フリーカメラ ON/OFF（ホットキー）
+      label: フリーカメラ ON/OFF
       key: ToggleFreeCam
       type: hotkey
       defaultKey: F5
       defaultButton: Y
-      description: コントローラーの場合は ControllerModifier と同時押しが必要です。
+      controllerDescription: ControllerModifier と同時押しが必要です。
 
     - name: FixedFreeCamToggle
-      label: 固定フリーカメラ ON/OFF（ホットキー）
+      label: 固定フリーカメラ ON/OFF
       key: ToggleFixedFreeCam
       type: hotkey
       defaultKey: F6
       defaultButton: X
       description: |
         フリーカメラ起動中にカメラ位置を固定するモードを切り替えます。
-        フリーカメラ起動中のみ有効。コントローラーの場合は ControllerModifier と同時押しが必要です。
+        フリーカメラ起動中のみ有効。
+      controllerDescription: ControllerModifier と同時押しが必要です。
 
 - section: Animation
   configs:
@@ -414,7 +416,7 @@
         format: '{0:F4}'
 
     - name: CostumeChangerShow
-      label: 衣装変更 UI 表示（ホットキー）
+      label: 衣装変更 UI 表示
       key: Show
       type: hotkey
       defaultKey: F7
@@ -431,23 +433,21 @@
         デバッグ目的でゲームフォルダに steam_appid.txt（内容: 3443820）を置くとバイパスできます。
 
     - name: OverlayToggle
-      label: オーバーレイ表示切替（ホットキー）
+      label: オーバーレイ表示切替
       key: ToggleOverlay
       type: hotkey
       defaultKey: F12
       defaultButton: Start
-      description: |
-        フリーカメラの操作ガイドオーバーレイの表示/非表示を切り替えます。
-        コントローラーの場合は ControllerModifier と同時押しが必要です。
+      description: フリーカメラの操作ガイドオーバーレイの表示/非表示を切り替えます。
+      controllerDescription: ControllerModifier と同時押しが必要です。
 
     - name: CaptureScreenshot
-      label: スクリーンショット保存（ホットキー）
+      label: スクリーンショット保存
       type: hotkey
       defaultKey: P
       defaultButton: A
-      description: |
-        フリーカメラ中にゲーム UI・MOD オーバーレイを写さず BepInEx/screenshots フォルダへ PNG 保存します。
-        コントローラーの場合は ControllerModifier と同時押しが必要です。
+      description: フリーカメラ中にゲーム UI・MOD オーバーレイを写さず BepInEx/screenshots フォルダへ PNG 保存します。
+      controllerDescription: ControllerModifier と同時押しが必要です。
 
 - section: HideUI
   configs:
@@ -504,23 +504,22 @@
         category: Game
 
     - name: TimeStopToggle
-      label: 時間停止 ON/OFF（ホットキー）
+      label: 時間停止 ON/OFF
       key: ToggleTimeStop
       type: hotkey
       defaultKey: T
       defaultButton: B
-      description: |
-        フリーカメラ中の撮影構図決めなどに使用します。
-        コントローラーの場合は ControllerModifier と同時押しが必要です。
+      description: フリーカメラ中の撮影構図決めなどに使用します。
+      controllerDescription: ControllerModifier と同時押しが必要です。
 
     - name: FrameAdvance
-      label: 1 フレーム送り（ホットキー）
+      label: 1 フレーム送り
       type: hotkey
       defaultKey: F
       description: 時間停止中のみ有効です。
 
     - name: FastForward
-      label: 早送りホールド（ホットキー）
+      label: 早送りホールド
       type: hotkey
       defaultKey: G
       description: 押している間のみ時間を早送りします。倍率は FastForwardSpeed で設定できます。

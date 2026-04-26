@@ -38,7 +38,7 @@
       type: hotkey
       defaultKey: F12
       defaultButton: Start
-      description: コントローラーの場合は ControllerModifier と同時押しが必要です。
+      controllerDescription: ControllerModifier と同時押しが必要です。
 
 - section: Sample
   configs:

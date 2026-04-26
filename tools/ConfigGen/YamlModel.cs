@@ -22,6 +22,11 @@ public class ConfigEntryDef
     public string? DefaultButton { get; set; }
     public List<object>? Range { get; set; }
     public string Description { get; set; } = "";
+    /// <summary>
+    /// type=hotkey 専用。Gamepad エントリ (XxxButton) の description にのみ追記される
+    /// ゲームパッド固有の補足説明。Keyboard エントリには出力されない。
+    /// </summary>
+    public string? ControllerDescription { get; set; }
     public UiDef? Ui { get; set; }
 
     [YamlIgnore]

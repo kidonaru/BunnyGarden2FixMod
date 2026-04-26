@@ -91,13 +91,24 @@ public static class CodeEmitter
     {
         if (string.IsNullOrEmpty(e.DefaultKey))
             throw new InvalidOperationException($"[{e.Name}] type=hotkey requires defaultKey");
-        var descLit = ToVerbatimStringLiteral(BuildDescriptionWithLabel(e));
+        var labelLit = ToVerbatimStringLiteral(e.Label ?? string.Empty);
+        var descLit = ToVerbatimStringLiteral((e.Description ?? string.Empty).TrimEnd('\n'));
         var button = string.IsNullOrEmpty(e.DefaultButton) ? "None" : e.DefaultButton!;
         sb.AppendLine($"        {e.Name} = new global::BunnyGarden2FixMod.Utils.HotkeyConfig(cfg,");
         sb.AppendLine($"            \"{e.Section}\", \"{e.EffectiveKey}\",");
         sb.AppendLine($"            global::UnityEngine.InputSystem.Key.{e.DefaultKey},");
         sb.AppendLine($"            global::BunnyGarden2FixMod.Utils.ControllerButton.{button},");
-        sb.AppendLine($"            {descLit});");
+        sb.AppendLine($"            {labelLit},");
+        if (!string.IsNullOrEmpty(e.ControllerDescription))
+        {
+            var ctrlDescLit = ToVerbatimStringLiteral(e.ControllerDescription!.TrimEnd('\n'));
+            sb.AppendLine($"            {descLit},");
+            sb.AppendLine($"            {ctrlDescLit});");
+        }
+        else
+        {
+            sb.AppendLine($"            {descLit});");
+        }
     }
 
     private static void EmitUIEntries(StringBuilder sb, List<ConfigEntryDef> entries)

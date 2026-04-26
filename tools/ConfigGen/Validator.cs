@@ -80,6 +80,8 @@ public static class Validator
                     errors.Add($"[{e.Name}] defaultKey is only valid for type=hotkey");
                 if (!string.IsNullOrEmpty(e.DefaultButton))
                     errors.Add($"[{e.Name}] defaultButton is only valid for type=hotkey");
+                if (!string.IsNullOrEmpty(e.ControllerDescription))
+                    errors.Add($"[{e.Name}] controllerDescription is only valid for type=hotkey");
             }
 
             if (e.Range != null && e.Type != "int" && e.Type != "float")

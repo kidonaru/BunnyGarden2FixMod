@@ -56,8 +56,9 @@ OptionMenu の DISPLAY 項目に追加される追加解像度（ウィンドウ
             "Hotkey", "Sample",
             global::UnityEngine.InputSystem.Key.F12,
             global::BunnyGarden2FixMod.Utils.ControllerButton.Start,
-            @"サンプルホットキー
-コントローラーの場合は ControllerModifier と同時押しが必要です。");
+            @"サンプルホットキー",
+            @"",
+            @"ControllerModifier と同時押しが必要です。");
 
         SampleToggle = cfg.Bind("Sample", "SampleToggle",
             false,
