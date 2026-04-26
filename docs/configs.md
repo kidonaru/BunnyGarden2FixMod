@@ -169,7 +169,7 @@ Wardrobe パネル表示中、以下のキーで操作できます。
 | キー | デフォルト | 説明 |
 |------|-----------|------|
 | `SteamLaunchCheck` | `true` | Steam 外から直接起動された場合に Steam 経由で自動的に再起動します。<br>デバッグ目的でゲームフォルダに steam_appid.txt（内容: 3443820）を置くとバイパスできます。 |
-| `UIScale` | `1.0` | MOD 提供の UI（F7 衣装変更 / F9 設定パネル / F1 出勤順）の表示倍率。<br>ゲーム本体 UI には影響しません。変更はパネルを閉じて開き直すと反映されます。 |
+| `UIScale` | `1.5` | MOD 提供の UI（F7 衣装変更 / F9 設定パネル / F1 出勤順）の表示倍率。<br>ゲーム本体 UI には影響しません。変更はパネルを閉じて開き直すと反映されます。 |
 | `ToggleOverlayKey` | `F12` | フリーカメラの操作ガイドオーバーレイの表示/非表示を切り替えます。 |
 | `ToggleOverlayButton` | `Start` | フリーカメラの操作ガイドオーバーレイの表示/非表示を切り替えます。<br>ControllerModifier と同時押しが必要です。 |
 | `CaptureScreenshotKey` | `P` | フリーカメラ中にゲーム UI・MOD オーバーレイを写さず BepInEx/screenshots フォルダへ PNG 保存します。 |

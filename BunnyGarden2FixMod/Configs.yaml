@@ -546,8 +546,8 @@
     - name: UIScale
       label: MOD UI スケール
       type: float
-      default: 1.0
-      range: [0.5, 2.0]
+      default: 1.5
+      range: [1.0, 2.0]
       description: |
         MOD 提供の UI（F7 衣装変更 / F9 設定パネル / F1 出勤順）の表示倍率。
         ゲーム本体 UI には影響しません。変更はパネルを閉じて開き直すと反映されます。
