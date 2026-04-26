@@ -11,12 +11,19 @@ namespace BunnyGarden2FixMod;
 public static class Configs
 {
     // ─── 静的フィールド ──────────────────────────────
+    /// <summary>解像度幅</summary>
     public static ConfigEntry<int> Width;
+    /// <summary>拡張解像度幅</summary>
     public static ConfigEntry<int> ExtraWidth;
+    /// <summary>FPS 上限</summary>
     public static ConfigEntry<int> FrameRate;
+    /// <summary>時間停止トグルキー</summary>
     public static ConfigEntry<UnityEngine.InputSystem.Key> TimeStopToggleKey;
+    /// <summary>サンプルホットキー</summary>
     public static global::BunnyGarden2FixMod.Utils.HotkeyConfig SampleHotkey;
+    /// <summary>テスト Toggle</summary>
     public static ConfigEntry<bool> SampleToggle;
+    /// <summary>テスト Slider</summary>
     public static ConfigEntry<float> SampleSlider;
 
     // ─── BindAll: Plugin.Awake から1回呼ぶ ──────────
@@ -24,38 +31,44 @@ public static class Configs
     {
         Width = cfg.Bind("Resolution", "Width",
             1920,
-            @"解像度の幅（横）を指定します");
+            @"解像度幅
+横方向のピクセル数。");
 
         ExtraWidth = cfg.Bind("Resolution", "ExtraWidth",
             2560,
-            @"ゲーム内 OptionMenu の DISPLAY 項目に追加される拡張解像度（ウィンドウモード）の幅。
+            @"拡張解像度幅
+OptionMenu の DISPLAY 項目に追加される追加解像度（ウィンドウモード）の幅。
 既定 2560（WQHD）。16:9 を推奨。");
 
         FrameRate = cfg.Bind("Display", "FrameRate",
             60,
             new ConfigDescription(
-                @"フレームレート上限",
+                @"FPS 上限
+-1 で上限を撤廃します。",
                 new AcceptableValueRange<int>(30, 240)));
 
         TimeStopToggleKey = cfg.Bind("Hotkey", "TimeStopToggleKey",
             UnityEngine.InputSystem.Key.F8,
-            @"時間停止のトグルキー");
+            @"時間停止トグルキー
+フリーカメラ中の構図決めなどに使用。");
 
         SampleHotkey = new global::BunnyGarden2FixMod.Utils.HotkeyConfig(cfg,
             "Hotkey", "Sample",
             global::UnityEngine.InputSystem.Key.F12,
             global::BunnyGarden2FixMod.Utils.ControllerButton.Start,
-            @"サンプルホットキー。
+            @"サンプルホットキー
 コントローラーの場合は ControllerModifier と同時押しが必要です。");
 
         SampleToggle = cfg.Bind("Sample", "SampleToggle",
             false,
-            @"テスト用 Toggle");
+            @"テスト Toggle
+ConfigGen の toggle UI 出力を確認するためのサンプル。");
 
         SampleSlider = cfg.Bind("Sample", "SampleSlider",
             0.5f,
             new ConfigDescription(
-                @"テスト用 Slider",
+                @"テスト Slider
+ConfigGen の slider UI 出力を確認するためのサンプル。",
                 new AcceptableValueRange<float>(0.0f, 1.0f)));
 
     }
@@ -68,7 +81,7 @@ public static class Configs
             Category = "Sample",
             Order    = 10,
             Label    = "テスト Toggle",
-            Desc     = "テスト用 Toggle",
+            Desc     = "ConfigGen の toggle UI 出力を確認するためのサンプル。",
             Kind     = global::BunnyGarden2FixMod.Patches.Settings.UIKind.Toggle,
             Accessor = new global::BunnyGarden2FixMod.Patches.Settings.BoolAccessor(() => SampleToggle),
         },
@@ -77,7 +90,7 @@ public static class Configs
             Category = "Sample",
             Order    = 20,
             Label    = "テスト Slider",
-            Desc     = "テスト用 Slider",
+            Desc     = "ConfigGen の slider UI 出力を確認するためのサンプル。",
             Kind       = global::BunnyGarden2FixMod.Patches.Settings.UIKind.Slider,
             SliderMin  = 0f,
             SliderMax  = 1f,

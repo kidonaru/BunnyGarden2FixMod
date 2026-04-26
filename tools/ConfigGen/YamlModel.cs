@@ -13,6 +13,7 @@ public class ConfigEntryDef
     public string Name { get; set; } = "";
     [YamlIgnore]
     public string Section { get; set; } = "";
+    public string Label { get; set; } = "";
     public string? Key { get; set; }
     public string Type { get; set; } = "";
     public string? EnumType { get; set; }
@@ -30,7 +31,12 @@ public class ConfigEntryDef
 public class UiDef
 {
     public string Kind { get; set; } = "";
-    public string Label { get; set; } = "";
+    /// <summary>
+    /// 旧形式 (label が ui ブロック内) 検出用。新形式では top-level の <see cref="ConfigEntryDef.Label"/> を使う。
+    /// Validator が非空の場合エラーにする。
+    /// TODO: 移行完了後（外部 fork 等で旧形式が残っていないことが確認できたら）削除。
+    /// </summary>
+    public string? Label { get; set; }
     public string? Category { get; set; }
     public int? Order { get; set; }
     public double? Step { get; set; }

@@ -33,6 +33,7 @@ public static class CodeEmitter
         sb.AppendLine("    // ─── 静的フィールド ──────────────────────────────");
         foreach (var e in entries)
         {
+            sb.AppendLine($"    /// <summary>{XmlEscape(e.Label)}</summary>");
             if (e.Type == "hotkey")
             {
                 sb.AppendLine($"    public static global::BunnyGarden2FixMod.Utils.HotkeyConfig {e.Name};");
@@ -62,7 +63,7 @@ public static class CodeEmitter
 
             var csType = MapType(e);
             var defaultLit = FormatDefault(e);
-            var descLit = ToVerbatimStringLiteral(e.Description.TrimEnd('\n'));
+            var descLit = ToVerbatimStringLiteral(BuildDescriptionWithLabel(e));
 
             if (e.Range != null && e.Range.Count == 2)
             {
@@ -90,7 +91,7 @@ public static class CodeEmitter
     {
         if (string.IsNullOrEmpty(e.DefaultKey))
             throw new InvalidOperationException($"[{e.Name}] type=hotkey requires defaultKey");
-        var descLit = ToVerbatimStringLiteral(e.Description.TrimEnd('\n'));
+        var descLit = ToVerbatimStringLiteral(BuildDescriptionWithLabel(e));
         var button = string.IsNullOrEmpty(e.DefaultButton) ? "None" : e.DefaultButton!;
         sb.AppendLine($"        {e.Name} = new global::BunnyGarden2FixMod.Utils.HotkeyConfig(cfg,");
         sb.AppendLine($"            \"{e.Section}\", \"{e.EffectiveKey}\",");
@@ -120,7 +121,7 @@ public static class CodeEmitter
     private static void EmitOneUIEntry(StringBuilder sb, ConfigEntryDef e, int uiIndex)
     {
         var category = string.IsNullOrEmpty(e.Ui!.Category) ? e.Section : e.Ui.Category;
-        var labelLit = ToCSharpStringLiteral(e.Ui.Label);
+        var labelLit = ToCSharpStringLiteral(e.Label);
         var categoryLit = ToCSharpStringLiteral(category!);
         // ui.order 未指定時は YAML 宣言順 (UI エントリ間の) に基づく値をフォールバック。
         // 同一 category 内の相対順序は宣言順で保たれる。
@@ -216,8 +217,30 @@ public static class CodeEmitter
         _ => v.ToString()!
     };
 
+    /// <summary>
+    /// ConfigDescription の本文を組み立てる: 1 行目を label、2 行目以降を YAML description とする。
+    /// BepInEx は .cfg ファイルに改行を保持するため、ユーザーは label を「設定の見出し」として読める。
+    /// description が空ならば label のみ。
+    /// </summary>
+    private static string BuildDescriptionWithLabel(ConfigEntryDef e)
+    {
+        // Validator が label を必須化しているが、ヘルパー単体での安全性のため null も吸収する。
+        var label = e.Label ?? string.Empty;
+        var desc = (e.Description ?? string.Empty).TrimEnd('\n');
+        if (string.IsNullOrEmpty(desc)) return label;
+        return label + "\n" + desc;
+    }
+
     private static string ToVerbatimStringLiteral(string s)
     {
         return "@\"" + s.Replace("\"", "\"\"") + "\"";
+    }
+
+    private static string XmlEscape(string s)
+    {
+        return s
+            .Replace("&", "&amp;")
+            .Replace("<", "&lt;")
+            .Replace(">", "&gt;");
     }
 }
