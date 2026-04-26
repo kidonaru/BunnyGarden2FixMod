@@ -31,6 +31,7 @@ public class UITSlider : VisualElement
     private Func<float, string> m_format;
     private bool m_suppressEvents;
     private float m_lastCommittedValue;
+    private float m_step; // 0 = ホイール無効
 
     public float Value => m_slider != null ? m_slider.value : 0f;
 
@@ -60,6 +61,10 @@ public class UITSlider : VisualElement
             value = min,
             showInputField = false,
         };
+        // Unity Slider 内蔵の矢印キーナビゲーションを無効化する。
+        // SettingsController が InputSystem 経由で NudgeSelectedSlider を呼ぶため、
+        // focusable=true のままだと選択中でないスライダーまで反応してしまう。
+        m_slider.focusable = false;
         m_slider.style.marginTop = 0;
         m_slider.style.marginBottom = 0;
         // 借用 theme stylesheet が Slider USS を含まない場合に track/dragger が高さ 0 で
@@ -82,6 +87,8 @@ public class UITSlider : VisualElement
         // PointerUpEvent は dragger / track どちらでもバブルアップで届く。
         // TrickleDown.TrickleDown を使うと dragger に capture される前に取れて取りこぼしを防げる。
         m_slider.RegisterCallback<PointerUpEvent>(_ => CommitIfChanged(), TrickleDown.TrickleDown);
+        // ホイール対応: ±m_step。m_step==0 のときは何もしない（既存呼び出し元の挙動を変えないため）。
+        m_slider.RegisterCallback<WheelEvent>(OnWheel);
         m_lastCommittedValue = m_slider.value;
         Add(m_slider);
     }
@@ -145,10 +152,113 @@ public class UITSlider : VisualElement
     }
 
     /// <summary>
+    /// ホイール 1 ノッチで ±step。delta.y は下回転で +、上回転で - なので符号反転する。
+    /// step が未設定 (==0) または負値のときは既存の挙動を変えないため何もしない。
+    /// </summary>
+    public void SetStep(float step)
+    {
+        // !(step > 0f) は step が 0 / 負 / NaN のとき true。NaN を素通りさせないため否定形で書く。
+        m_step = !(step > 0f) ? 0f : step;
+    }
+
+    private void OnWheel(WheelEvent evt)
+    {
+        if (m_slider == null) return;
+        if (m_step <= 0f) return; // step 未設定なら親へバブルさせて従来挙動を維持
+        if (!m_slider.enabledInHierarchy) return; // disabled なら無視（親 ScrollView を奪わない）
+        // 横ホイール (delta.y==0) を明示的に no-op。Unity の Mathf.Sign(0f) は 1f を返すので
+        // delta.y を直接見るほうが安全（Math.Sign とは挙動が違う点に注意）。
+        if (Mathf.Approximately(evt.delta.y, 0f)) return;
+        float dir = -Mathf.Sign(evt.delta.y); // up=+, down=-
+        float next = Mathf.Clamp(m_slider.value + dir * m_step, m_slider.lowValue, m_slider.highValue);
+        // ホイール対応スライダーは ScrollView 内でも値変化なし時にスクロール乗っ取りされたくないので、
+        // 範囲端で動かなくても StopPropagation して親 ScrollView を奪わない（明示的にホイール対応した意思表示）。
+        if (Mathf.Approximately(next, m_slider.value))
+        {
+            evt.StopPropagation();
+            return;
+        }
+        m_slider.value = next; // RegisterValueChangedCallback が OnValueChanged 発火
+        // ホイール操作は 1 ノッチ即 commit 扱い
+        m_lastCommittedValue = m_slider.value;
+        OnValueCommitted?.Invoke(m_slider.value);
+        evt.StopPropagation();
+    }
+
+    /// <summary>
     /// テーマ USS に依存せずトラック/ドラッガーが見えるよう、UnityEngine.UIElements.Slider 内部の
     /// dragger-border/tracker/dragger 要素に最小限の塗り・寸法を入れる。
     /// 名前は Unity 公式 USS の class 名 (.unity-base-slider__tracker など) と一致。
     /// </summary>
+    /// <summary>
+    /// Setup 後に呼ぶ。F9 設定パネル等で使う、ラベル無し横並びレイアウトに切り替える。
+    /// 表示構造: [slider本体] [値ラベル(指定幅, 右寄せ)] を 1 行で並べる。
+    /// sliderFlex=true のとき、slider 本体は flex で残り幅を埋める。false のとき固定幅。
+    /// 既存の縦レイアウト呼び出し元 (CostumeChanger 等) には影響しない。
+    /// </summary>
+    public void SetCompactLayout(float sliderWidth = 160f, float valueWidth = 50f, bool sliderFlex = false)
+    {
+        // ルート自体を横並びに変更
+        style.flexDirection = FlexDirection.Row;
+        style.alignItems = Align.Center;
+        style.marginTop = 0;
+
+        // sliderFlex=true のとき、UITSlider 自体も親 row 内で伸びる必要がある
+        // （内側の m_slider が flexGrow=1 でも親が伸びないと 0px に潰れる）
+        if (sliderFlex)
+        {
+            style.flexGrow = 1;
+            style.flexShrink = 1;
+            style.minWidth = 0;
+        }
+
+        // Setup() が作った row（m_nameLabel + m_valueLabel を持つ上段コンテナ）を非表示にする
+        // this の子は [0]=row, [1]=m_slider の順で Add されている
+        if (childCount > 0 && this[0] is VisualElement topRow)
+            topRow.style.display = DisplayStyle.None;
+
+        // m_slider を横並びに配置
+        if (m_slider != null)
+        {
+            if (sliderFlex)
+            {
+                // flex モード: 残り幅をすべて埋める
+                m_slider.style.flexGrow = 1;
+                m_slider.style.flexShrink = 1;
+                m_slider.style.width = StyleKeyword.Auto;
+                m_slider.style.minWidth = 0;
+                m_slider.style.maxWidth = StyleKeyword.None;
+            }
+            else
+            {
+                // 固定幅モード: minWidth / maxWidth も固定しないと内部の unity-base-slider__tracker が伸縮してしまう
+                m_slider.style.flexGrow = 0;
+                m_slider.style.flexShrink = 0;
+                m_slider.style.width = sliderWidth;
+                m_slider.style.minWidth = sliderWidth;
+                m_slider.style.maxWidth = sliderWidth;
+            }
+            m_slider.style.marginRight = 8;
+        }
+
+        // m_valueLabel を topRow から取り外し、this 直下に右寄せで追加
+        // 幅を固定しないと長い値テキストで行が広がってしまうため min/max も固定する
+        if (m_valueLabel != null)
+        {
+            m_valueLabel.RemoveFromHierarchy();
+            m_valueLabel.style.width = valueWidth;
+            m_valueLabel.style.minWidth = valueWidth;
+            m_valueLabel.style.maxWidth = valueWidth;
+            m_valueLabel.style.flexShrink = 0;
+            m_valueLabel.style.flexGrow = 0;
+            m_valueLabel.style.unityTextAlign = TextAnchor.MiddleRight;
+            m_valueLabel.style.whiteSpace = WhiteSpace.NoWrap;
+            m_valueLabel.style.overflow = Overflow.Hidden;
+            m_valueLabel.style.textOverflow = TextOverflow.Ellipsis;
+            Add(m_valueLabel);
+        }
+    }
+
     private static void StyleSliderInternals(Slider slider)
     {
         // 想定 slider height = 18, tracker height = 4 → tracker.top = 7 で中央
