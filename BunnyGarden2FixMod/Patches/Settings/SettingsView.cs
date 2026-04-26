@@ -403,6 +403,8 @@ public class SettingsView : MonoBehaviour
     public void Show()
     {
         if (m_root == null) return;
+        // PanelSettings.scale は Awake 時の値を保持するため、開く度に Configs.UIScale を反映する。
+        if (m_settings != null) m_settings.scale = Configs.UIScale.Value;
         // spec §515: 毎回先頭カテゴリから開始。開閉状態も都度リセット。
         m_selectedCategoryIndex = 0;
         m_selectedRowIndex = 0;
