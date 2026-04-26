@@ -33,8 +33,15 @@ public static class CodeEmitter
         sb.AppendLine("    // ─── 静的フィールド ──────────────────────────────");
         foreach (var e in entries)
         {
-            var csType = MapType(e);
-            sb.AppendLine($"    public static ConfigEntry<{csType}> {e.Name};");
+            if (e.Type == "hotkey")
+            {
+                sb.AppendLine($"    public static global::BunnyGarden2FixMod.Utils.HotkeyConfig {e.Name};");
+            }
+            else
+            {
+                var csType = MapType(e);
+                sb.AppendLine($"    public static ConfigEntry<{csType}> {e.Name};");
+            }
         }
         sb.AppendLine();
     }
@@ -46,6 +53,13 @@ public static class CodeEmitter
         sb.AppendLine("    {");
         foreach (var e in entries)
         {
+            if (e.Type == "hotkey")
+            {
+                EmitHotkeyBind(sb, e);
+                sb.AppendLine();
+                continue;
+            }
+
             var csType = MapType(e);
             var defaultLit = FormatDefault(e);
             var descLit = ToVerbatimStringLiteral(e.Description.TrimEnd('\n'));
@@ -70,6 +84,19 @@ public static class CodeEmitter
         }
         sb.AppendLine("    }");
         sb.AppendLine();
+    }
+
+    private static void EmitHotkeyBind(StringBuilder sb, ConfigEntryDef e)
+    {
+        if (string.IsNullOrEmpty(e.DefaultKey))
+            throw new InvalidOperationException($"[{e.Name}] type=hotkey requires defaultKey");
+        var descLit = ToVerbatimStringLiteral(e.Description.TrimEnd('\n'));
+        var button = string.IsNullOrEmpty(e.DefaultButton) ? "None" : e.DefaultButton!;
+        sb.AppendLine($"        {e.Name} = new global::BunnyGarden2FixMod.Utils.HotkeyConfig(cfg,");
+        sb.AppendLine($"            \"{e.Section}\", \"{e.EffectiveKey}\",");
+        sb.AppendLine($"            global::UnityEngine.InputSystem.Key.{e.DefaultKey},");
+        sb.AppendLine($"            global::BunnyGarden2FixMod.Utils.ControllerButton.{button},");
+        sb.AppendLine($"            {descLit});");
     }
 
     private static void EmitUIEntries(StringBuilder sb, List<ConfigEntryDef> entries)

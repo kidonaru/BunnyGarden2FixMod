@@ -22,7 +22,7 @@ public class Plugin : BaseUnityPlugin
 {
     private static Plugin Instance;
 
-    // ── ConfigEntry: Configs.yaml → Generated/Configs.g.cs に転送（HotkeyConfig は YAML 非対応のため field のまま）──
+    // ── Config: Configs.yaml → Generated/Configs.g.cs に転送 ──
 
     // Animation
     public static ConfigEntry<bool> ConfigMoreTalkReactions => Configs.MoreTalkReactions;
@@ -38,8 +38,8 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<float> ConfigSlowSpeed  => Configs.SlowSpeed;
     public static ConfigEntry<bool>  ConfigHideGameUiInFreeCam => Configs.HideGameUiInFreeCam;
     public static ConfigEntry<bool>  ConfigControllerEnabled   => Configs.ControllerEnabled;
-    public static HotkeyConfig ConfigFixedFreeCamToggle;
-    public static HotkeyConfig ConfigFreeCamToggle;
+    public static HotkeyConfig       ConfigFreeCamToggle       => Configs.FreeCamToggle;
+    public static HotkeyConfig       ConfigFixedFreeCamToggle  => Configs.FixedFreeCamToggle;
 
     // Cheat
     public static ConfigEntry<bool> ConfigCastOrder              => Configs.CastOrder;
@@ -58,7 +58,7 @@ public class Plugin : BaseUnityPlugin
 
     // CostumeChanger
     public static ConfigEntry<bool>  ConfigCostumeChangerEnabled      => Configs.CostumeChangerEnabled;
-    public static HotkeyConfig       ConfigCostumeChangerShow;
+    public static HotkeyConfig       ConfigCostumeChangerShow         => Configs.CostumeChangerShow;
     public static ConfigEntry<bool>  ConfigRespectGameCostumeOverride => Configs.RespectGameCostumeOverride;
     public static ConfigEntry<bool>  ConfigSwimWearStocking           => Configs.SwimWearStocking;
     public static ConfigEntry<float> ConfigStockingOffset             => Configs.StockingOffset;
@@ -70,10 +70,10 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> ConfigEndingChekiSlideshow => Configs.EndingChekiSlideshow;
 
     // General
-    public static HotkeyConfig      ConfigCaptureScreenshot;
+    public static HotkeyConfig      ConfigOverlayToggle     => Configs.OverlayToggle;
+    public static HotkeyConfig      ConfigCaptureScreenshot => Configs.CaptureScreenshot;
     public static ConfigEntry<int>  ConfigScreenshotScale;
-    public static ConfigEntry<bool> ConfigSteamLaunchCheck => Configs.SteamLaunchCheck;
-    public static HotkeyConfig      ConfigOverlayToggle;
+    public static ConfigEntry<bool> ConfigSteamLaunchCheck  => Configs.SteamLaunchCheck;
 
     // Graphics
     public static ConfigEntry<int>              ConfigWidth                      => Configs.Width;
@@ -102,9 +102,9 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> ConfigExtraActive => Configs.ExtraActive;
 
     // Time
-    public static HotkeyConfig       ConfigTimeStopToggle;
-    public static HotkeyConfig       ConfigFrameAdvance;
-    public static HotkeyConfig       ConfigFastForward;
+    public static HotkeyConfig       ConfigTimeStopToggle   => Configs.TimeStopToggle;
+    public static HotkeyConfig       ConfigFrameAdvance     => Configs.FrameAdvance;
+    public static HotkeyConfig       ConfigFastForward      => Configs.FastForward;
     public static ConfigEntry<float> ConfigFastForwardSpeed => Configs.FastForwardSpeed;
 
     internal static event Action GUICallback;
@@ -129,6 +129,7 @@ public class Plugin : BaseUnityPlugin
 
         // YAML 駆動 Config エントリ（source of truth: Configs.yaml → Generated/Configs.g.cs）。
         // Plugin.ConfigX は Configs.X への expression-bodied プロパティで転送される。
+        // HotkeyConfig (KB+Pad 統合型) も BindAll 内で初期化される。
         Configs.BindAll(Config);
 
         // 上流 develop 由来エントリ（後続コミットで YAML へ移行予定）
@@ -169,76 +170,12 @@ public class Plugin : BaseUnityPlugin
             true,
             "true にすると、一部のモーションでキャストのスカートが体にめり込むクリッピングを修正します。");
 
-        // HotkeyConfig（KB+Pad 統合型は YAML 非対応のため直接 Bind）
-        ConfigOverlayToggle = new HotkeyConfig(Config,
-            "General",
-            "ToggleOverlay",
-            Key.F12,
-            ControllerButton.Start,
-            "フリーカメラの操作ガイドオーバーレイの表示/非表示を切り替えるホットキー\n" +
-            "コントローラーの場合は ControllerModifier と同時押しが必要です。");
-
-        ConfigFreeCamToggle = new HotkeyConfig(Config,
-            "Camera",
-            "ToggleFreeCam",
-            Key.F5,
-            ControllerButton.Y,
-            "フリーカメラの ON/OFF を切り替えるホットキー\n" +
-            "コントローラーの場合は ControllerModifier と同時押しが必要です。");
-
-        ConfigFixedFreeCamToggle = new HotkeyConfig(Config,
-            "Camera",
-            "ToggleFixedFreeCam",
-            Key.F6,
-            ControllerButton.X,
-            "フリーカメラ起動中に、カメラ位置を固定する固定モードの ON/OFF を切り替えるホットキー\n" +
-            "フリーカメラ起動中のみ有効です。コントローラーの場合は ControllerModifier と同時押しが必要です。");
-
-        ConfigTimeStopToggle = new HotkeyConfig(Config,
-            "Time",
-            "ToggleTimeStop",
-            Key.T,
-            ControllerButton.B,
-            "時間停止の ON/OFF を切り替えるホットキー。フリーカメラ中の撮影構図決めなどに使用します。\n" +
-            "コントローラーの場合は ControllerModifier と同時押しが必要です。");
-
-        ConfigFrameAdvance = new HotkeyConfig(Config,
-            "Time",
-            "FrameAdvance",
-            Key.F,
-            ControllerButton.None,
-            "時間停止中に 1 フレームだけ進めるホットキー。時間停止中のみ有効です。");
-
-        ConfigFastForward = new HotkeyConfig(Config,
-            "Time",
-            "FastForward",
-            Key.G,
-            ControllerButton.None,
-            "押している間のみ時間を早送りするホットキー（ホールド）。\n" +
-            "早送り倍率は FastForwardSpeed で設定できます。");
-
-        ConfigCaptureScreenshot = new HotkeyConfig(Config,
-            "General",
-            "CaptureScreenshot",
-            Key.P,
-            ControllerButton.A,
-            "フリーカメラ中にゲーム UI・MOD オーバーレイを写さずスクリーンショットを保存するホットキー。\n" +
-            "BepInEx/screenshots フォルダに PNG で保存されます。\n" +
-            "コントローラーの場合は ControllerModifier と同時押しが必要です。");
-
         ConfigScreenshotScale = Config.Bind(
             "General",
             "ScreenshotScale",
             1,
             "スクリーンショットの解像度倍率。1 で通常のスクリーンショットと同じ解像度、2 で倍の解像度になります。");
 
-
-        ConfigCostumeChangerShow = new HotkeyConfig(Config,
-            "CostumeChanger",
-            "Show",
-            Key.F7,
-            ControllerButton.None,
-            "衣装変更 UI の表示トグルキー。");
 
         // Steam 外起動を検出した場合は Steam 経由で再起動して即終了
         if (ConfigSteamLaunchCheck.Value && SteamLaunchChecker.CheckAndRelaunchIfNeeded())

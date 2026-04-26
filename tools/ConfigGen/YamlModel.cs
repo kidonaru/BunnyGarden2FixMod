@@ -17,6 +17,8 @@ public class ConfigEntryDef
     public string Type { get; set; } = "";
     public string? EnumType { get; set; }
     public object? Default { get; set; }
+    public string? DefaultKey { get; set; }
+    public string? DefaultButton { get; set; }
     public List<object>? Range { get; set; }
     public string Description { get; set; } = "";
     public UiDef? Ui { get; set; }

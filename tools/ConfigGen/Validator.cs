@@ -13,17 +13,32 @@ public static class Validator
         var dupNames = entries.GroupBy(e => e.Name).Where(g => g.Count() > 1).Select(g => g.Key);
         foreach (var n in dupNames) errors.Add($"Duplicate name: {n}");
 
-        var dupKeys = entries
-            .GroupBy(e => (e.Section, e.EffectiveKey))
-            .Where(g => g.Count() > 1)
-            .Select(g => $"{g.Key.Section}:{g.Key.EffectiveKey}");
-        foreach (var k in dupKeys) errors.Add($"Duplicate (section, key): {k}");
+        // hotkey は cfg 上で {key}Key / {key}Button の 2 つに展開されるため、衝突検出も展開後の名前で行う。
+        var keyTuples = new List<(string Section, string Key, string SourceName)>();
+        foreach (var e in entries)
+        {
+            if (e.Type == "hotkey")
+            {
+                keyTuples.Add((e.Section, e.EffectiveKey + "Key", e.Name));
+                keyTuples.Add((e.Section, e.EffectiveKey + "Button", e.Name));
+            }
+            else
+            {
+                keyTuples.Add((e.Section, e.EffectiveKey, e.Name));
+            }
+        }
+        var dupKeys = keyTuples
+            .GroupBy(t => (t.Section, t.Key))
+            .Where(g => g.Count() > 1);
+        foreach (var g in dupKeys)
+            errors.Add($"Duplicate (section, key): {g.Key.Section}:{g.Key.Key} (from: {string.Join(", ", g.Select(t => t.SourceName).Distinct().OrderBy(s => s, StringComparer.Ordinal))})");
 
         foreach (var e in entries)
         {
-            var validTypes = new[] { "bool", "int", "float", "enum", "key" };
+            var validTypes = new[] { "bool", "int", "float", "enum", "key", "hotkey" };
             if (!validTypes.Contains(e.Type))
-                errors.Add($"[{e.Name}] Invalid type: {e.Type} (allowed: {string.Join(", ", validTypes)})");
+                errors.Add($"[{e.Name}] Invalid type: {e.Type} (allowed: {string.Join(", ", validTypes)}). " +
+                           $"Note: 'key' = single ConfigEntry<Key>, 'hotkey' = HotkeyConfig (KB+Pad pair)");
 
             if ((e.Type == "enum" || e.Type == "key") && string.IsNullOrEmpty(e.EnumType))
                 errors.Add($"[{e.Name}] type={e.Type} requires enumType");
@@ -33,6 +48,31 @@ public static class Validator
                 var defStr = e.Default.ToString() ?? "";
                 if (!IdentifierPattern.IsMatch(defStr))
                     errors.Add($"[{e.Name}] enum/key default must be a valid identifier name (got: '{defStr}')");
+            }
+
+            if (e.Type == "hotkey")
+            {
+                if (e.Default != null)
+                    errors.Add($"[{e.Name}] type=hotkey must not specify 'default' (use defaultKey/defaultButton)");
+                if (!string.IsNullOrEmpty(e.EnumType))
+                    errors.Add($"[{e.Name}] type=hotkey must not specify 'enumType' (Key + ControllerButton are fixed)");
+                if (e.Range != null)
+                    errors.Add($"[{e.Name}] type=hotkey must not specify 'range'");
+                if (e.Ui != null)
+                    errors.Add($"[{e.Name}] type=hotkey must not specify 'ui' (HotkeyConfig is not on the F9 panel)");
+                if (string.IsNullOrEmpty(e.DefaultKey))
+                    errors.Add($"[{e.Name}] type=hotkey requires defaultKey (e.g. F12, P, T)");
+                else if (!IdentifierPattern.IsMatch(e.DefaultKey))
+                    errors.Add($"[{e.Name}] defaultKey must be a valid identifier (got: '{e.DefaultKey}')");
+                if (!string.IsNullOrEmpty(e.DefaultButton) && !IdentifierPattern.IsMatch(e.DefaultButton))
+                    errors.Add($"[{e.Name}] defaultButton must be a valid identifier (got: '{e.DefaultButton}')");
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(e.DefaultKey))
+                    errors.Add($"[{e.Name}] defaultKey is only valid for type=hotkey");
+                if (!string.IsNullOrEmpty(e.DefaultButton))
+                    errors.Add($"[{e.Name}] defaultButton is only valid for type=hotkey");
             }
 
             if (e.Range != null && e.Type != "int" && e.Type != "float")

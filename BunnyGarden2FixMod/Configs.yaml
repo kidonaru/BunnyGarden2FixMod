@@ -128,6 +128,24 @@
         kind: toggle
         label: コントローラ操作を有効化
 
+    - name: FreeCamToggle
+      key: ToggleFreeCam
+      type: hotkey
+      defaultKey: F5
+      defaultButton: Y
+      description: |
+        フリーカメラの ON/OFF を切り替えるホットキー
+        コントローラーの場合は ControllerModifier と同時押しが必要です。
+
+    - name: FixedFreeCamToggle
+      key: ToggleFixedFreeCam
+      type: hotkey
+      defaultKey: F6
+      defaultButton: X
+      description: |
+        フリーカメラ起動中に、カメラ位置を固定する固定モードの ON/OFF を切り替えるホットキー
+        フリーカメラ起動中のみ有効です。コントローラーの場合は ControllerModifier と同時押しが必要です。
+
 - section: Animation
   configs:
     - name: MoreTalkReactions
@@ -383,6 +401,12 @@
         step: 0.0001
         format: '{0:F4}'
 
+    - name: CostumeChangerShow
+      key: Show
+      type: hotkey
+      defaultKey: F7
+      description: 衣装変更 UI の表示トグルキー。
+
 - section: General
   configs:
     - name: SteamLaunchCheck
@@ -391,6 +415,24 @@
       description: |
         true にすると Steam 外から直接起動された場合に Steam 経由で自動的に再起動します。
         デバッグ目的でゲームフォルダに steam_appid.txt（内容: 3443820）を置くと、この機能をバイパスできます。
+
+    - name: OverlayToggle
+      key: ToggleOverlay
+      type: hotkey
+      defaultKey: F12
+      defaultButton: Start
+      description: |
+        フリーカメラの操作ガイドオーバーレイの表示/非表示を切り替えるホットキー
+        コントローラーの場合は ControllerModifier と同時押しが必要です。
+
+    - name: CaptureScreenshot
+      type: hotkey
+      defaultKey: P
+      defaultButton: A
+      description: |
+        フリーカメラ中にゲーム UI・MOD オーバーレイを写さずスクリーンショットを保存するホットキー。
+        BepInEx/screenshots フォルダに PNG で保存されます。
+        コントローラーの場合は ControllerModifier と同時押しが必要です。
 
 - section: HideUI
   configs:
@@ -439,3 +481,24 @@
         label: 早送り倍率
         step: 1
         format: '{0:F0}x'
+
+    - name: TimeStopToggle
+      key: ToggleTimeStop
+      type: hotkey
+      defaultKey: T
+      defaultButton: B
+      description: |
+        時間停止の ON/OFF を切り替えるホットキー。フリーカメラ中の撮影構図決めなどに使用します。
+        コントローラーの場合は ControllerModifier と同時押しが必要です。
+
+    - name: FrameAdvance
+      type: hotkey
+      defaultKey: F
+      description: 時間停止中に 1 フレームだけ進めるホットキー。時間停止中のみ有効です。
+
+    - name: FastForward
+      type: hotkey
+      defaultKey: G
+      description: |
+        押している間のみ時間を早送りするホットキー（ホールド）。
+        早送り倍率は FastForwardSpeed で設定できます。

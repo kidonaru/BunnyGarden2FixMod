@@ -15,6 +15,7 @@ public static class Configs
     public static ConfigEntry<int> ExtraWidth;
     public static ConfigEntry<int> FrameRate;
     public static ConfigEntry<UnityEngine.InputSystem.Key> TimeStopToggleKey;
+    public static global::BunnyGarden2FixMod.Utils.HotkeyConfig SampleHotkey;
     public static ConfigEntry<bool> SampleToggle;
     public static ConfigEntry<float> SampleSlider;
 
@@ -39,6 +40,13 @@ public static class Configs
         TimeStopToggleKey = cfg.Bind("Hotkey", "TimeStopToggleKey",
             UnityEngine.InputSystem.Key.F8,
             @"時間停止のトグルキー");
+
+        SampleHotkey = new global::BunnyGarden2FixMod.Utils.HotkeyConfig(cfg,
+            "Hotkey", "Sample",
+            global::UnityEngine.InputSystem.Key.F12,
+            global::BunnyGarden2FixMod.Utils.ControllerButton.Start,
+            @"サンプルホットキー。
+コントローラーの場合は ControllerModifier と同時押しが必要です。");
 
         SampleToggle = cfg.Bind("Sample", "SampleToggle",
             false,
