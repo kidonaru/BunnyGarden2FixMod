@@ -89,6 +89,8 @@ public static class Configs
     public static global::BunnyGarden2FixMod.Utils.HotkeyConfig CostumeChangerShow;
     /// <summary>Steam 経由起動を強制</summary>
     public static ConfigEntry<bool> SteamLaunchCheck;
+    /// <summary>MOD UI スケール</summary>
+    public static ConfigEntry<float> UIScale;
     /// <summary>オーバーレイ表示切替</summary>
     public static global::BunnyGarden2FixMod.Utils.HotkeyConfig OverlayToggle;
     /// <summary>スクリーンショット保存</summary>
@@ -380,6 +382,14 @@ skin_stocking 系 blendShape (skin_stocking / skin_socks / skin_stocking_lower) 
             @"Steam 経由起動を強制
 Steam 外から直接起動された場合に Steam 経由で自動的に再起動します。
 デバッグ目的でゲームフォルダに steam_appid.txt（内容: 3443820）を置くとバイパスできます。");
+
+        UIScale = cfg.Bind("General", "UIScale",
+            1.0f,
+            new ConfigDescription(
+                @"MOD UI スケール
+MOD 提供の UI（F7 衣装変更 / F9 設定パネル / F1 出勤順）の表示倍率。
+ゲーム本体 UI には影響しません。変更はパネルを閉じて開き直すと反映されます。",
+                new AcceptableValueRange<float>(0.5f, 2.0f)));
 
         OverlayToggle = new global::BunnyGarden2FixMod.Utils.HotkeyConfig(cfg,
             "General", "ToggleOverlay",
@@ -738,8 +748,21 @@ FastForward ホットキー押下中の Time.timeScale 倍率。",
         },
         new global::BunnyGarden2FixMod.Patches.Settings.UIEntryMeta
         {
-            Category = "HideUI",
+            Category = "General",
             Order    = 260,
+            Label    = "MOD UI スケール",
+            Desc     = "MOD 提供の UI（F7 衣装変更 / F9 設定パネル / F1 出勤順）の表示倍率。\nゲーム本体 UI には影響しません。変更はパネルを閉じて開き直すと反映されます。\n",
+            Kind       = global::BunnyGarden2FixMod.Patches.Settings.UIKind.Slider,
+            SliderMin  = 0.5f,
+            SliderMax  = 2f,
+            SliderStep = 0.1f,
+            Format     = "{0:F1}x",
+            Accessor = new global::BunnyGarden2FixMod.Patches.Settings.FloatAccessor(() => UIScale, 0.1f),
+        },
+        new global::BunnyGarden2FixMod.Patches.Settings.UIEntryMeta
+        {
+            Category = "HideUI",
+            Order    = 270,
             Label    = "旅行・特別シーンで所持金を非表示",
             Desc     = "旅行シーンおよび特別なシーンで雰囲気を損なう所持金 UI を非表示にします。\nF9 パネルまたはこのコンフィグで ON/OFF できます。\n",
             Kind     = global::BunnyGarden2FixMod.Patches.Settings.UIKind.Toggle,
@@ -748,7 +771,7 @@ FastForward ホットキー押下中の Time.timeScale 倍率。",
         new global::BunnyGarden2FixMod.Patches.Settings.UIEntryMeta
         {
             Category = "HideUI",
-            Order    = 270,
+            Order    = 280,
             Label    = "ボタンガイドを常時非表示",
             Desc     = "画面下のボタンガイド（操作ヒント）を常時非表示にします。\nF9 パネルまたはこのコンフィグで ON/OFF できます。\n",
             Kind     = global::BunnyGarden2FixMod.Patches.Settings.UIKind.Toggle,
@@ -757,7 +780,7 @@ FastForward ホットキー押下中の Time.timeScale 倍率。",
         new global::BunnyGarden2FixMod.Patches.Settings.UIEntryMeta
         {
             Category = "HideUI",
-            Order    = 280,
+            Order    = 290,
             Label    = "好感度ゲージを非表示",
             Desc     = "ラブカウンター（好感度ゲージ）を常時非表示にします。\nF9 パネルまたはこのコンフィグで ON/OFF できます。\n",
             Kind     = global::BunnyGarden2FixMod.Patches.Settings.UIKind.Toggle,
@@ -766,7 +789,7 @@ FastForward ホットキー押下中の Time.timeScale 倍率。",
         new global::BunnyGarden2FixMod.Patches.Settings.UIEntryMeta
         {
             Category = "Game",
-            Order    = 290,
+            Order    = 300,
             Label    = "早送り倍率",
             Desc     = "FastForward ホットキー押下中の Time.timeScale 倍率。",
             Kind       = global::BunnyGarden2FixMod.Patches.Settings.UIKind.Slider,

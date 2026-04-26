@@ -518,6 +518,19 @@
         Steam 外から直接起動された場合に Steam 経由で自動的に再起動します。
         デバッグ目的でゲームフォルダに steam_appid.txt（内容: 3443820）を置くとバイパスできます。
 
+    - name: UIScale
+      label: MOD UI スケール
+      type: float
+      default: 1.0
+      range: [0.5, 2.0]
+      description: |
+        MOD 提供の UI（F7 衣装変更 / F9 設定パネル / F1 出勤順）の表示倍率。
+        ゲーム本体 UI には影響しません。変更はパネルを閉じて開き直すと反映されます。
+      ui:
+        kind: slider
+        step: 0.1
+        format: '{0:F1}x'
+
     - name: OverlayToggle
       label: オーバーレイ表示切替
       key: ToggleOverlay
