@@ -35,20 +35,8 @@ namespace BunnyGarden2FixMod.Patches;
 [HarmonyPatch(typeof(GBSystem), "Setup")]
 public class VSyncPatch
 {
-    private static bool s_subscribed;
-
     private static void Postfix()
-    {
-        Apply();
-
-        if (!s_subscribed)
-        {
-            // BepInEx の ConfigEntry.SettingChanged は同インスタンス上で複数回購読すると
-            // ハンドラが重複登録されるため、s_subscribed フラグで一度だけ繋ぐ。
-            Plugin.ConfigForceVSync.SettingChanged += (_, _) => Apply();
-            s_subscribed = true;
-        }
-    }
+        => LiveConfigBinding.BindAndApply(Plugin.ConfigForceVSync, Apply);
 
     private static void Apply()
     {

@@ -13,21 +13,8 @@ namespace BunnyGarden2FixMod.Patches;
 [HarmonyPatch(typeof(GBSystem), "Setup")]
 public class SetRefreshRatePatch
 {
-    private static bool s_subscribed;
-
     private static void Postfix()
-    {
-        Apply();
-
-        if (!s_subscribed)
-        {
-            // 値変更イベントを購読し、以降は Setup を経由しなくても適用される。
-            // BepInEx の ConfigEntry.SettingChanged は同インスタンス上で複数回購読すると
-            // ハンドラが重複登録されるため、s_subscribed フラグで一度だけ繋ぐ。
-            Plugin.ConfigFrameRate.SettingChanged += (_, _) => Apply();
-            s_subscribed = true;
-        }
-    }
+        => LiveConfigBinding.BindAndApply(Plugin.ConfigFrameRate, Apply);
 
     private static void Apply()
     {
