@@ -44,6 +44,7 @@ public class Plugin : BaseUnityPlugin
 
     // Animation
     public static ConfigEntry<bool> ConfigMoreTalkReactions;
+    public static ConfigEntry<bool> ConfigFixAnimationClipping;
 
     // Appearance
     public static ConfigEntry<bool> ConfigDisableStockings;
@@ -267,6 +268,12 @@ public class Plugin : BaseUnityPlugin
             "MoreTalkReactions",
             false,
             "true にすると、バーの背景キャスト2人の会話リアクションモーションがより多様になります。");
+
+        ConfigFixAnimationClipping = Config.Bind(
+            "Animation",
+            "FixAnimationClipping",
+            true,
+            "true にすると、一部のモーションでキャストのスカートが体にめり込むクリッピングを修正します。");
 
         ConfigControllerTriggerDeadzone = Config.Bind(
             "Input",

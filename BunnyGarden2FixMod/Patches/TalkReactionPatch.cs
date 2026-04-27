@@ -30,16 +30,16 @@ public static class TalkReactionPatch
             MOTION.BOW,
         ];
 
-        private MOTION _lastMotion = MOTION._DUMMY;
+        private MOTION lastMotion = MOTION._DUMMY;
 
         public MOTION GetNextMotion()
         {
-            _lastMotion = _lastMotion switch
+            lastMotion = lastMotion switch
             {
                 MOTION.KNEEL_DOWN_START => MOTION.KNEEL_DOWN_END,
                 _ => TalkReactionMotions[Random.RandomRangeInt(0, TalkReactionMotions.Length)]
             };
-            return _lastMotion;
+            return lastMotion;
         }
     }
 
@@ -52,7 +52,7 @@ public static class TalkReactionPatch
         if (!__instance.m_chara.activeSelf
             || GBSystem.Instance.IsConversateChar(__instance.m_id)
             || new[] { MOTION.WALK, MOTION.SERVING_FOOD, MOTION.MOPPING_FLOOR, MOTION.CHECK_SHELVES }
-                .Any(motion => __instance.m_animator.GetCurrentAnimatorStateInfo(2).IsName(MOTION_NAME[(int)motion]))
+                .Any(motion => __instance.isSameAnimation(Layer.LAYER_BASE, MOTION_NAME[(int)motion]))
             || !__instance.m_enableTalkReactionMotion)
         {
             return false;
