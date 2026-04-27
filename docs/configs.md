@@ -14,8 +14,17 @@
 | `ExtraWidth` | `2560` | ゲーム内 OptionMenu の DISPLAY 項目に追加される追加解像度（ウィンドウモード）の幅。<br>既定 2560（WQHD）。16:9 以外の値は自動的に最大 16:9 に変換されます。 |
 | `ExtraHeight` | `1440` | ゲーム内 OptionMenu の DISPLAY 項目に追加される追加解像度（ウィンドウモード）の高さ。<br>既定 1440（WQHD）。16:9 以外の値は自動的に最大 16:9 に変換されます。 |
 | `FrameRate` | `60` | -1 で上限を撤廃します。 |
+| `ForceVSync` | `false` | QualitySettings.vSyncCount = 1 を強制します。<br>フレームレートがモニターのリフレッシュレートに同期され、ティアリングが防止されます。<br>有効時は FrameRate 設定より VSync が優先されます。 |
+| `ForceExclusiveFullScreen` | `false` | Windows DWM をバイパスし、複数モニター接続時の FPS 低下が改善される場合があります。<br>ウィンドウモード (1080p / 720p) では無効です。<br>Alt+Tab でのウィンドウ切り替え時に画面が一瞬暗転する場合があります。 |
 | `AntiAliasingType` | `MSAA8x` | Off / FXAA / TAA / MSAA2x / MSAA4x / MSAA8x。<br>右にいくほど画質が向上しますが動作が重くなります。 |
 | `DisableChromaticAberration` | `false` | 画面端のにじみエフェクトを無効化します。 |
+| `DisableDepthOfField` | `false` | 画面の一部がぼやけるエフェクトを無効化します。 |
+
+## [Resolution] ウルトラワイド
+
+| キー | デフォルト | 説明 |
+|------|-----------|------|
+| `FullscreenUltrawideEnabled` | `false` | ゲームプレイ中のみモニターのネイティブ比率で表示します。<br>タイトル画面やメニュー画面は従来どおり 16:9 のままです。 |
 
 ## [Camera] フリーカメラ
 
@@ -65,6 +74,7 @@
 | キー | デフォルト | 説明 |
 |------|-----------|------|
 | `MoreTalkReactions` | `false` | バーの背景キャスト 2 人の会話リアクションモーションを追加します。 |
+| `FixAnimationClipping` | `true` | 一部のモーションで発生する、キャストのスカートが体にめり込む現象を補正します。 |
 
 ## [Input] コントローラー入力
 
@@ -174,6 +184,7 @@ Wardrobe パネル表示中、以下のキーで操作できます。
 | `ToggleOverlayButton` | `Start` | フリーカメラの操作ガイドオーバーレイの表示/非表示を切り替えます。<br>ControllerModifier と同時押しが必要です。 |
 | `CaptureScreenshotKey` | `P` | フリーカメラ中にゲーム UI・MOD オーバーレイを写さず BepInEx/screenshots フォルダへ PNG 保存します。 |
 | `CaptureScreenshotButton` | `A` | フリーカメラ中にゲーム UI・MOD オーバーレイを写さず BepInEx/screenshots フォルダへ PNG 保存します。<br>ControllerModifier と同時押しが必要です。 |
+| `ScreenshotScale` | `1` | 1 で通常のスクリーンショットと同じ解像度、2 で倍の解像度になります。 |
 
 ## [HideUI] UI 非表示設定
 

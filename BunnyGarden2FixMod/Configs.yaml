@@ -52,6 +52,28 @@
         step: 1
         format: '{0} fps'
 
+    - name: ForceVSync
+      label: VSync を強制 ON
+      type: bool
+      default: false
+      description: |
+        QualitySettings.vSyncCount = 1 を強制します。
+        フレームレートがモニターのリフレッシュレートに同期され、ティアリングが防止されます。
+        有効時は FrameRate 設定より VSync が優先されます。
+      ui:
+        kind: toggle
+
+    - name: ForceExclusiveFullScreen
+      label: 排他的フルスクリーンを強制
+      type: bool
+      default: false
+      description: |
+        Windows DWM をバイパスし、複数モニター接続時の FPS 低下が改善される場合があります。
+        ウィンドウモード (1080p / 720p) では無効です。
+        Alt+Tab でのウィンドウ切り替え時に画面が一瞬暗転する場合があります。
+      ui:
+        kind: toggle
+
     - name: AntiAliasing
       label: アンチエイリアシング
       key: AntiAliasingType
@@ -67,6 +89,27 @@
       type: bool
       default: false
       description: 画面端のにじみエフェクトを無効化します。
+      ui:
+        kind: toggle
+
+    - name: DisableDepthOfField
+      label: 被写界深度を無効化
+      type: bool
+      default: false
+      description: 画面の一部がぼやけるエフェクトを無効化します。
+      ui:
+        kind: toggle
+
+- section: Resolution
+  name: ウルトラワイド
+  configs:
+    - name: FullscreenUltrawideEnabled
+      label: フルスクリーンでウルトラワイド比率を使う
+      type: bool
+      default: false
+      description: |
+        ゲームプレイ中のみモニターのネイティブ比率で表示します。
+        タイトル画面やメニュー画面は従来どおり 16:9 のままです。
       ui:
         kind: toggle
 
@@ -203,6 +246,14 @@
       ui:
         kind: toggle
         category: Game
+
+    - name: FixAnimationClipping
+      label: スカートのクリッピングを修正
+      type: bool
+      default: true
+      description: 一部のモーションで発生する、キャストのスカートが体にめり込む現象を補正します。
+      ui:
+        kind: toggle
 
 - section: Input
   name: コントローラー入力
@@ -572,6 +623,17 @@
       defaultButton: A
       description: フリーカメラ中にゲーム UI・MOD オーバーレイを写さず BepInEx/screenshots フォルダへ PNG 保存します。
       controllerDescription: ControllerModifier と同時押しが必要です。
+
+    - name: ScreenshotScale
+      label: スクリーンショット解像度倍率
+      type: int
+      default: 1
+      range: [1, 8]
+      description: 1 で通常のスクリーンショットと同じ解像度、2 で倍の解像度になります。
+      ui:
+        kind: slider
+        step: 1
+        format: '{0}x'
 
 - section: HideUI
   name: UI 非表示設定

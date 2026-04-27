@@ -25,8 +25,8 @@ public class Plugin : BaseUnityPlugin
     // ── Config: Configs.yaml → Generated/Configs.g.cs に転送 ──
 
     // Animation
-    public static ConfigEntry<bool> ConfigMoreTalkReactions => Configs.MoreTalkReactions;
-    public static ConfigEntry<bool> ConfigFixAnimationClipping;
+    public static ConfigEntry<bool> ConfigMoreTalkReactions   => Configs.MoreTalkReactions;
+    public static ConfigEntry<bool> ConfigFixAnimationClipping => Configs.FixAnimationClipping;
 
     // Appearance
     public static ConfigEntry<bool> ConfigDisableStockings => Configs.DisableStockings;
@@ -74,7 +74,7 @@ public class Plugin : BaseUnityPlugin
     // General
     public static HotkeyConfig      ConfigOverlayToggle     => Configs.OverlayToggle;
     public static HotkeyConfig      ConfigCaptureScreenshot => Configs.CaptureScreenshot;
-    public static ConfigEntry<int>  ConfigScreenshotScale;
+    public static ConfigEntry<int>  ConfigScreenshotScale   => Configs.ScreenshotScale;
     public static ConfigEntry<bool> ConfigSteamLaunchCheck  => Configs.SteamLaunchCheck;
 
     // Graphics
@@ -83,12 +83,14 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<int>              ConfigExtraWidth                 => Configs.ExtraWidth;
     public static ConfigEntry<int>              ConfigExtraHeight                => Configs.ExtraHeight;
     public static ConfigEntry<int>              ConfigFrameRate                  => Configs.FrameRate;
-    public static ConfigEntry<bool>             ConfigFullscreenUltrawideEnabled;
-    public static ConfigEntry<bool>             ConfigForceVSync;
-    public static ConfigEntry<bool>             ConfigForceExclusiveFullScreen;
+    public static ConfigEntry<bool>             ConfigForceVSync                 => Configs.ForceVSync;
+    public static ConfigEntry<bool>             ConfigForceExclusiveFullScreen   => Configs.ForceExclusiveFullScreen;
     public static ConfigEntry<AntiAliasingType> ConfigAntiAliasing               => Configs.AntiAliasing;
     public static ConfigEntry<bool>             ConfigDisableChromaticAberration => Configs.DisableChromaticAberration;
-    public static ConfigEntry<bool>             ConfigDisableDepthOfField;
+    public static ConfigEntry<bool>             ConfigDisableDepthOfField        => Configs.DisableDepthOfField;
+
+    // Resolution
+    public static ConfigEntry<bool> ConfigFullscreenUltrawideEnabled => Configs.FullscreenUltrawideEnabled;
 
     // HideUI
     public static ConfigEntry<bool> ConfigHideUIEnabled            => Configs.HideUIEnabled;
@@ -133,50 +135,6 @@ public class Plugin : BaseUnityPlugin
         // Plugin.ConfigX は Configs.X への expression-bodied プロパティで転送される。
         // HotkeyConfig (KB+Pad 統合型) も BindAll 内で初期化される。
         Configs.BindAll(Config);
-
-        // 上流 develop 由来エントリ（後続コミットで YAML へ移行予定）
-        ConfigFullscreenUltrawideEnabled = Config.Bind(
-            "Resolution",
-            "FullscreenUltrawideEnabled",
-            false,
-            "true にすると、フルスクリーンかつゲームプレイ中のみモニターのネイティブ横長比率を使います。\n" +
-            "タイトル画面やメニュー画面は従来どおり 16:9 のままです。既定 true。");
-
-        ConfigForceVSync = Config.Bind(
-            "Graphics",
-            "ForceVSync",
-            false,
-            "true にすると VSync を強制 ON にします（QualitySettings.vSyncCount = 1）。\n" +
-            "フレームレートがモニターのリフレッシュレートに同期され、ティアリングが防止されます。\n" +
-            "有効時は FrameRate 設定より VSync が優先されます。");
-
-        ConfigForceExclusiveFullScreen = Config.Bind(
-            "Graphics",
-            "ForceExclusiveFullScreen",
-            false,
-            "true にするとフルスクリーン時に排他的フルスクリーン（Exclusive Full Screen）を強制します。\n" +
-            "Windows DWM（デスクトップウィンドウマネージャー）をバイパスし、GPU がゲーム描画に\n" +
-            "専念するため、複数モニター接続時の FPS 低下が改善される場合があります。\n" +
-            "ウィンドウモード（1080p / 720p）では無効です。\n" +
-            "Alt+Tab でのウィンドウ切り替え時に画面が一瞬暗転する場合があります。");
-
-        ConfigDisableDepthOfField = Config.Bind(
-            "Graphics",
-            "DisableDepthOfField",
-            false,
-            "true にすると被写界深度エフェクト(画面の一部がぼやける効果)を無効化します。");
-
-        ConfigFixAnimationClipping = Config.Bind(
-            "Animation",
-            "FixAnimationClipping",
-            true,
-            "true にすると、一部のモーションでキャストのスカートが体にめり込むクリッピングを修正します。");
-
-        ConfigScreenshotScale = Config.Bind(
-            "General",
-            "ScreenshotScale",
-            1,
-            "スクリーンショットの解像度倍率。1 で通常のスクリーンショットと同じ解像度、2 で倍の解像度になります。");
 
 
         // Steam 外起動を検出した場合は Steam 経由で再起動して即終了
