@@ -94,6 +94,7 @@ public class Plugin : BaseUnityPlugin
 
     // General
     public static HotkeyConfig ConfigCaptureScreenshot;
+    public static ConfigEntry<int> ConfigScreenshotScale;
 
     public static ConfigEntry<bool> ConfigSteamLaunchCheck;
     public static HotkeyConfig ConfigOverlayToggle;
@@ -353,6 +354,12 @@ public class Plugin : BaseUnityPlugin
             "フリーカメラ中にゲーム UI・MOD オーバーレイを写さずスクリーンショットを保存するホットキー。\n" +
             "BepInEx/screenshots フォルダに PNG で保存されます。\n" +
             "コントローラーの場合は ControllerModifier と同時押しが必要です。");
+
+        ConfigScreenshotScale = Config.Bind(
+            "General",
+            "ScreenshotScale",
+            1,
+            "スクリーンショットの解像度倍率。1 で通常のスクリーンショットと同じ解像度、2 で倍の解像度になります。");
 
         ConfigDisableStockings = Config.Bind(
             "Appearance",
@@ -664,65 +671,27 @@ public class Plugin : BaseUnityPlugin
 
     private System.Collections.IEnumerator CaptureScreenshotCoroutine()
     {
-        isCapturingScreenshot = true;
         Camera captureCam = FindCurrentCamera();
-        yield return new WaitForEndOfFrame();
-
         if (captureCam == null)
-        {
-            isCapturingScreenshot = false;
             yield break;
-        }
 
-        RenderTexture rt = null;
-        Texture2D tex = null;
-        RenderTexture previousActive = RenderTexture.active;
-        RenderTexture previousTarget = captureCam.targetTexture;
+        isCapturingScreenshot = true;
 
         try
         {
-            int width = Mathf.Max(1, captureCam.pixelWidth);
-            int height = Mathf.Max(1, captureCam.pixelHeight);
-
             Directory.CreateDirectory(ScreenshotDirectory);
-            string path = Path.Combine(ScreenshotDirectory,
-                $"bg2_{DateTime.Now:yyyyMMdd_HHmmss_fff}.png");
-
-            rt = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32)
-            {
-                antiAliasing = 8
-            };
-            tex = new Texture2D(width, height, TextureFormat.RGBA32, false);
-
-            captureCam.targetTexture = rt;
-            captureCam.Render();
-
-            RenderTexture.active = rt;
-            tex.ReadPixels(new Rect(0f, 0f, width, height), 0, 0);
-            tex.Apply(false, false);
-
-            File.WriteAllBytes(path, ImageConversion.EncodeToPNG(tex));
+            string path = Path.Combine(ScreenshotDirectory, $"bg2_{DateTime.Now:yyyyMMdd_HHmmss_fff}.png");
+            ScreenCapture.CaptureScreenshot(path, ConfigScreenshotScale.Value);
             PatchLogger.LogInfo($"スクリーンショットを保存しました: {path}");
         }
         catch (Exception ex)
         {
             PatchLogger.LogError($"スクリーンショット保存失敗: {ex.Message}");
         }
-        finally
-        {
-            if (captureCam != null)
-                captureCam.targetTexture = previousTarget;
 
-            RenderTexture.active = previousActive;
-
-            if (rt != null)
-                Destroy(rt);
-
-            if (tex != null)
-                Destroy(tex);
-
-            isCapturingScreenshot = false;
-        }
+        // スクリーンショットがキャプチャされる前にオーバーレイを再表示しないよう、1フレーム待機します
+        yield return null;
+        isCapturingScreenshot = false;
     }
 }
 
