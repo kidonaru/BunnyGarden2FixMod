@@ -131,12 +131,11 @@ public static class CodeEmitter
 
     private static void EmitOneUIEntry(StringBuilder sb, ConfigEntryDef e, int uiIndex)
     {
-        var category = string.IsNullOrEmpty(e.Ui!.Category) ? e.Section : e.Ui.Category;
         var labelLit = ToCSharpStringLiteral(e.Label);
-        var categoryLit = ToCSharpStringLiteral(category!);
+        var categoryLit = ToCSharpStringLiteral(e.Section);
         // ui.order 未指定時は YAML 宣言順 (UI エントリ間の) に基づく値をフォールバック。
-        // 同一 category 内の相対順序は宣言順で保たれる。
-        var order = e.Ui.Order ?? (uiIndex * 10);
+        // 同一 section 内の相対順序は宣言順で保たれる。
+        var order = e.Ui!.Order ?? (uiIndex * 10);
 
         sb.AppendLine("        new global::BunnyGarden2FixMod.Patches.Settings.UIEntryMeta");
         sb.AppendLine("        {");

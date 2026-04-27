@@ -39,8 +39,6 @@ public static class Validator
                 errors.Add($"[{e.Name}] label is required (top-level field, placed under name)");
             else if (e.Label.IndexOfAny(new[] { '\r', '\n' }) >= 0)
                 errors.Add($"[{e.Name}] label must be a single line (no CR/LF; CodeEmitter writes it as a one-line // comment)");
-            if (e.Ui != null && !string.IsNullOrEmpty(e.Ui.Label))
-                errors.Add($"[{e.Name}] 'ui.label' is no longer supported. Move it to top-level 'label:' under 'name:'");
 
             var validTypes = new[] { "bool", "int", "float", "enum", "key", "hotkey" };
             if (!validTypes.Contains(e.Type))

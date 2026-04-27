@@ -60,19 +60,25 @@ public static class MarkdownEmitter
         if (e.Type == "hotkey")
         {
             // hotkey は .cfg 上で {key}Key / {key}Button の 2 entry に展開されるため、表でも 2 行に分ける。
-            var keyDesc = WithLabel(e.Label, (e.Description ?? string.Empty).TrimEnd('\n'));
-            sb.Append("| `").Append(e.EffectiveKey).Append("Key` | `").Append(e.DefaultKey).Append("` | ")
-              .Append(Cell(keyDesc)).AppendLine(" |");
+            // label には「のキーボードキー」「のボタン」を補い、Key 行と Button 行を見分けやすくする。
+            var desc = (e.Description ?? string.Empty).TrimEnd('\n');
+            var keyLabel = string.IsNullOrEmpty(e.Label) ? null : e.Label + "のキーボードキー";
+            var btnLabel = string.IsNullOrEmpty(e.Label) ? null : e.Label + "のボタン";
 
-            var btnDesc = keyDesc;
+            var keyCell = WithLabel(keyLabel, desc);
+            sb.Append("| `").Append(e.EffectiveKey).Append("Key` | `").Append(e.DefaultKey).Append("` | ")
+              .Append(Cell(keyCell)).AppendLine(" |");
+
+            var btnDesc = desc;
             if (!string.IsNullOrEmpty(e.ControllerDescription))
             {
                 var cd = e.ControllerDescription!.TrimEnd('\n');
                 btnDesc = string.IsNullOrEmpty(btnDesc) ? cd : btnDesc + "\n" + cd;
             }
+            var btnCell = WithLabel(btnLabel, btnDesc);
             var btnDefault = string.IsNullOrEmpty(e.DefaultButton) ? "None" : e.DefaultButton!;
             sb.Append("| `").Append(e.EffectiveKey).Append("Button` | `").Append(btnDefault).Append("` | ")
-              .Append(Cell(btnDesc)).AppendLine(" |");
+              .Append(Cell(btnCell)).AppendLine(" |");
         }
         else
         {
