@@ -50,7 +50,7 @@ public class UITSwitch : VisualElement
 
         m_label = new Label();
         m_label.style.color = kLabelColor;
-        m_label.style.fontSize = 11;
+        m_label.style.fontSize = 10;
         m_label.style.flexGrow = 1;
         Add(m_label);
 

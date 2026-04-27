@@ -58,7 +58,7 @@ public class UITSlider : VisualElement
         // 親 row 側は height ではなく minHeight 指定で行を可変高さにしておく必要がある。
         m_nameLabel = new Label(label);
         m_nameLabel.style.color = kNameLabelColor;
-        m_nameLabel.style.fontSize = 11;
+        m_nameLabel.style.fontSize = 10;
         m_nameLabel.style.width = NameLabelWidth;
         m_nameLabel.style.minWidth = NameLabelWidth;
         m_nameLabel.style.maxWidth = NameLabelWidth;
