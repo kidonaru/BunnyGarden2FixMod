@@ -29,6 +29,10 @@ public class HideUIRuntime : MonoBehaviour
     private CanvasGroup m_footerCanvasGroup;
     private CanvasGroup m_likabilityCanvasGroup;
 
+    private bool m_moneyWasHidden;
+    private bool m_footerWasHidden;
+    private bool m_likabilityWasHidden;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -38,49 +42,74 @@ public class HideUIRuntime : MonoBehaviour
             return;
         }
         Instance = this;
+        SceneManager.activeSceneChanged += OnActiveSceneChanged;
     }
 
     private void OnDestroy()
     {
         if (ReferenceEquals(Instance, this)) Instance = null;
+        SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+    }
+
+    private void OnActiveSceneChanged(Scene _, Scene __)
+    {
+        // CanvasGroup の対象 GameObject がシーン破棄で fake-null 化する可能性に備え、
+        // キャッシュとフラグをリセット。次フレームの LateUpdate で必要なら再取得される。
+        m_moneyCanvasGroup = null;
+        m_footerCanvasGroup = null;
+        m_likabilityCanvasGroup = null;
+        m_moneyWasHidden = false;
+        m_footerWasHidden = false;
+        m_likabilityWasHidden = false;
+    }
+
+    /// <summary>
+    /// CanvasGroup の表示状態を一括で設定するヘルパ。
+    /// </summary>
+    private static void ApplyHide(CanvasGroup g, bool hide)
+    {
+        g.alpha          = hide ? 0f : 1f;
+        g.interactable   = !hide;
+        g.blocksRaycasts = !hide;
     }
 
     private void LateUpdate()
     {
         // ── 所持金 UI ──────────────────────────────────────────
-        if (m_moneyCanvasGroup == null)
-            FindMoneyUI();
-
-        if (m_moneyCanvasGroup != null)
+        bool moneyEnabled = Configs.HideMoneyInSpecialScenes?.Value == true;
+        if (moneyEnabled || m_moneyWasHidden)
         {
-            bool shouldHideMoney = ShouldHideMoneyUI();
-            m_moneyCanvasGroup.alpha          = shouldHideMoney ? 0f : 1f;
-            m_moneyCanvasGroup.interactable   = !shouldHideMoney;
-            m_moneyCanvasGroup.blocksRaycasts = !shouldHideMoney;
+            if (m_moneyCanvasGroup == null) FindMoneyUI();
+            if (m_moneyCanvasGroup != null)
+            {
+                bool shouldHide = moneyEnabled && ShouldHideMoneyUI();
+                ApplyHide(m_moneyCanvasGroup, shouldHide);
+                m_moneyWasHidden = moneyEnabled;
+            }
         }
 
         // ── ボタンガイド（Footer）────────────────────────────────
-        if (m_footerCanvasGroup == null)
-            FindFooter();
-
-        if (m_footerCanvasGroup != null)
+        bool guideEnabled = Configs.HideButtonGuide?.Value == true;
+        if (guideEnabled || m_footerWasHidden)
         {
-            bool shouldHideGuide = Configs.HideButtonGuide?.Value == true;
-            m_footerCanvasGroup.alpha          = shouldHideGuide ? 0f : 1f;
-            m_footerCanvasGroup.interactable   = !shouldHideGuide;
-            m_footerCanvasGroup.blocksRaycasts = !shouldHideGuide;
+            if (m_footerCanvasGroup == null) FindFooter();
+            if (m_footerCanvasGroup != null)
+            {
+                ApplyHide(m_footerCanvasGroup, guideEnabled);
+                m_footerWasHidden = guideEnabled;
+            }
         }
 
         // ── 好感度ゲージ（LikabilityUI コンテナ）────────────────────
-        if (m_likabilityCanvasGroup == null)
-            FindLikabilityGauge();
-
-        if (m_likabilityCanvasGroup != null)
+        bool likabilityEnabled = Configs.HideLikabilityGauge?.Value == true;
+        if (likabilityEnabled || m_likabilityWasHidden)
         {
-            bool shouldHideLikability = Configs.HideLikabilityGauge?.Value == true;
-            m_likabilityCanvasGroup.alpha          = shouldHideLikability ? 0f : 1f;
-            m_likabilityCanvasGroup.interactable   = !shouldHideLikability;
-            m_likabilityCanvasGroup.blocksRaycasts = !shouldHideLikability;
+            if (m_likabilityCanvasGroup == null) FindLikabilityGauge();
+            if (m_likabilityCanvasGroup != null)
+            {
+                ApplyHide(m_likabilityCanvasGroup, likabilityEnabled);
+                m_likabilityWasHidden = likabilityEnabled;
+            }
         }
     }
 

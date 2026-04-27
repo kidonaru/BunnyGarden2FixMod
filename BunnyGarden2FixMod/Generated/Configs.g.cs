@@ -119,8 +119,6 @@ public static class Configs
     public static global::BunnyGarden2FixMod.Utils.HotkeyConfig FrameAdvance;
     /// <summary>早送りホールド</summary>
     public static global::BunnyGarden2FixMod.Utils.HotkeyConfig FastForward;
-    /// <summary>F9 設定パネルを有効化</summary>
-    public static ConfigEntry<bool> HideUIEnabled;
     /// <summary>旅行・特別シーンで所持金 UI を非表示</summary>
     public static ConfigEntry<bool> HideMoneyInSpecialScenes;
     /// <summary>画面下のボタンガイド(操作ヒント)を常時非表示</summary>
@@ -156,8 +154,8 @@ public static class Configs
             60,
             new ConfigDescription(
                 @"FPS 上限
--1 で上限を撤廃します。",
-                new AcceptableValueRange<int>(30, 240)));
+0 で上限を撤廃します。",
+                new AcceptableValueRange<int>(0, 1000)));
 
         ForceVSync = cfg.Bind("Graphics", "ForceVSync",
             false,
@@ -482,11 +480,6 @@ FastForward ホットキー押下中の Time.timeScale 倍率。",
             @"早送りホールド",
             @"押している間のみ有効。倍率は FastForwardSpeed で設定。");
 
-        HideUIEnabled = cfg.Bind("HideUI", "Enabled",
-            true,
-            @"F9 設定パネルを有効化
-F9 キーで一部 UI を非表示にできる設定パネルが開きます。");
-
         HideMoneyInSpecialScenes = cfg.Bind("HideUI", "HideInSpecialScenes",
             true,
             @"旅行・特別シーンで所持金 UI を非表示
@@ -512,10 +505,10 @@ F9 キーで一部 UI を非表示にできる設定パネルが開きます。"
             Category = "Graphics",
             Order    = 0,
             Label    = "FPS 上限",
-            Desc     = "-1 で上限を撤廃します。",
+            Desc     = "0 で上限を撤廃します。",
             Kind       = global::BunnyGarden2FixMod.Patches.Settings.UIKind.Slider,
-            SliderMin  = 30f,
-            SliderMax  = 240f,
+            SliderMin  = 0f,
+            SliderMax  = 1000f,
             SliderStep = 1f,
             Format     = "{0} fps",
             Accessor = new global::BunnyGarden2FixMod.Patches.Settings.IntAccessor(() => FrameRate, 1f),

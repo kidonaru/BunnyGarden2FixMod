@@ -14,6 +14,15 @@ public static class ConfigMigration
         public ConfigDefinition NewDef { get; } = newDef;
     }
 
+    /// <summary>
+    /// 廃止されたキーの定義（移行先なし・削除のみ）。
+    /// </summary>
+    private static readonly ConfigDefinition[] ObsoleteKeys =
+    [
+        // HideMoneyUIController 削除に伴い HideUI/Enabled は参照箇所が消滅したため廃止
+        new("HideUI", "Enabled"),
+    ];
+
     private static readonly MigrationEntry[] Migrations =
     [
         // 第一
@@ -58,10 +67,28 @@ public static class ConfigMigration
         config.SaveOnConfigSet = false;
 
         ArrayMigration(config);
+        RemoveObsoleteKeys(config);
 
         config.Save();
         config.SaveOnConfigSet = previousSaveOnConfigSet;
         PatchLogger.LogInfo($"[{nameof(ConfigMigration)}] 設定の移行が完了しました");
+    }
+
+    private static void RemoveObsoleteKeys(ConfigFile config)
+    {
+        // BepInEx の OrphanedEntries から廃止キーを削除する。
+        // OrphanedEntries に存在しない場合（すでにアクティブなキーとして登録済みなど）はスキップ。
+        var orphanedEntries =
+            (Dictionary<ConfigDefinition, string>)
+            AccessTools.PropertyGetter(typeof(ConfigFile), "OrphanedEntries").Invoke(config, null);
+
+        if (orphanedEntries == null) return;
+
+        foreach (var key in ObsoleteKeys)
+        {
+            if (!orphanedEntries.Remove(key)) continue;
+            PatchLogger.LogInfo($"[{nameof(ConfigMigration)}] 廃止された設定エントリを削除しました: {key}");
+        }
     }
 
     private static void ArrayMigration(ConfigFile config)

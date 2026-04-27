@@ -93,7 +93,6 @@ public class Plugin : BaseUnityPlugin
     public static ConfigEntry<bool> ConfigFullscreenUltrawideEnabled => Configs.FullscreenUltrawideEnabled;
 
     // HideUI
-    public static ConfigEntry<bool> ConfigHideUIEnabled            => Configs.HideUIEnabled;
     public static ConfigEntry<bool> ConfigHideMoneyInSpecialScenes => Configs.HideMoneyInSpecialScenes;
     public static ConfigEntry<bool> ConfigHideButtonGuide          => Configs.HideButtonGuide;
     public static ConfigEntry<bool> ConfigHideLikabilityGauge      => Configs.HideLikabilityGauge;

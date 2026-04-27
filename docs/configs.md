@@ -13,7 +13,7 @@
 | `Height` | `1080` | 解像度高さ<br>16:9 以外の値を指定すると自動的に最大 16:9 に変換されます。 |
 | `ExtraWidth` | `2560` | 拡張解像度幅<br>ゲーム内 OptionMenu の DISPLAY 項目に追加される追加解像度（ウィンドウモード）。既定 2560×1440（WQHD）。<br>16:9 以外の値は自動的に最大 16:9 に変換されます。 |
 | `ExtraHeight` | `1440` | 拡張解像度高さ<br>16:9 以外の値は自動的に最大 16:9 に変換されます。 |
-| `FrameRate` | `60` | FPS 上限<br>-1 で上限を撤廃します。 |
+| `FrameRate` | `60` | FPS 上限<br>0 で上限を撤廃します。 |
 | `ForceVSync` | `false` | VSync を強制 ON<br>QualitySettings.vSyncCount = 1 を強制します。<br>フレームレートがモニターのリフレッシュレートに同期され、ティアリングが防止されます。<br>有効時は FrameRate 設定より VSync が優先されます。 |
 | `ForceExclusiveFullScreen` | `false` | 排他的フルスクリーンを強制<br>Windows DWM をバイパスし、複数モニター接続時の FPS 低下が改善される場合があります。<br>ウィンドウモード (1080p / 720p) では無効です。<br>Alt+Tab でのウィンドウ切り替え時に画面が一瞬暗転する場合があります。 |
 | `AntiAliasingType` | `MSAA8x` | アンチエイリアシング<br>Off / FXAA / TAA / MSAA2x / MSAA4x / MSAA8x。<br>右にいくほど画質が向上しますが動作が重くなります。 |
@@ -174,7 +174,6 @@ Wardrobe パネル表示中、以下のキーで操作できます。
 
 | キー | デフォルト | 説明 |
 |------|-----------|------|
-| `Enabled` | `true` | F9 設定パネルを有効化<br>F9 キーで一部 UI を非表示にできる設定パネルが開きます。 |
 | `HideInSpecialScenes` | `true` | 旅行・特別シーンで所持金 UI を非表示<br>対象シーン:<br>  - 旅行シーン<br>  - 恋愛に関する特別なシーン |
 | `HideButtonGuide` | `false` | 画面下のボタンガイド(操作ヒント)を常時非表示 |
 | `HideLikabilityGauge` | `false` | ラブカウンター(好感度ゲージ)を常時非表示 |

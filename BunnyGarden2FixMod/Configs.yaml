@@ -39,8 +39,8 @@
       label: FPS 上限
       type: int
       default: 60
-      range: [30, 240]
-      description: -1 で上限を撤廃します。
+      range: [0, 1000]
+      description: 0 で上限を撤廃します。
       ui:
         kind: slider
         step: 1
@@ -633,13 +633,6 @@
     | **Tab / 1〜9** | カテゴリ切替 |
     | **Esc** | パネルを閉じる |
   configs:
-    - name: HideUIEnabled
-      label: F9 設定パネルを有効化
-      key: Enabled
-      type: bool
-      default: true
-      description: F9 キーで一部 UI を非表示にできる設定パネルが開きます。
-
     - name: HideMoneyInSpecialScenes
       label: 旅行・特別シーンで所持金 UI を非表示
       key: HideInSpecialScenes
