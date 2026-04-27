@@ -396,7 +396,14 @@ public class SettingsView : MonoBehaviour
         else
         {
             var sl = new UITSlider();
-            sl.Setup(entry.Label, entry.SliderMin, entry.SliderMax, m_font, v => string.Format(entry.Format, v));
+            // IntAccessor の場合は表示も int に丸める。UITSlider 内部値は float のため、
+            // formatter に raw float を渡すと "{0}x" が "3.51x" のように小数を含んで描画される。
+            // ストレージ側は IntAccessor.SetFloat で snap されるので保存値と表示値の不整合を防ぐ意味でも
+            // ここで丸めを適用する。
+            Func<float, string> formatter = entry.Accessor is IntAccessor
+                ? (v => string.Format(entry.Format, (int)Math.Round(v)))
+                : (v => string.Format(entry.Format, v));
+            sl.Setup(entry.Label, entry.SliderMin, entry.SliderMax, m_font, formatter);
             // SetValue は m_suppressEvents により OnValueChanged を発火させない安全な初期値設定
             sl.SetValue(entry.Accessor.GetFloat());
             sl.SetStep(entry.SliderStep);
