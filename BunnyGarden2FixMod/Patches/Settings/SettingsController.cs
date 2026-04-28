@@ -39,6 +39,27 @@ public class SettingsController : MonoBehaviour
     public static bool IsAnyCapturing =>
         Instance != null && Instance.m_isCapturingKey;
 
+    // キャプチャ中の Key 走査用キャッシュ。Enum.GetValues は呼び出しごとに新規配列を返し、
+    // foreach で boxing も発生するため、起動時に 1 度だけ取得して使い回す。
+    // None / AnyKey / IMESelected は仮想キー・特殊状態のため事前除外する。
+    private static readonly Key[] s_capturableKeys = BuildCapturableKeys();
+
+    private static Key[] BuildCapturableKeys()
+    {
+        var all = (Key[])System.Enum.GetValues(typeof(Key));
+        var list = new System.Collections.Generic.List<Key>(all.Length);
+        foreach (var key in all)
+        {
+            if (key == Key.None) continue;
+            // IMESelected は [Obsolete] enum 値、AnyKey は仮想キー。Unity 版差で名前が変わっても
+            // 列挙ベース判定なら build break しない。
+            var keyName = key.ToString();
+            if (keyName == "IMESelected" || keyName == "AnyKey") continue;
+            list.Add(key);
+        }
+        return list.ToArray();
+    }
+
     /// <summary>キーバインドキャプチャ中、もしくは Plugin の Suppress 期間中。Mod / 本体の入力を遮断する判定として使用。</summary>
     public static bool ShouldSuppressHotkey()
     {
@@ -180,15 +201,9 @@ public class SettingsController : MonoBehaviour
                 }
             }
 
-            // Enum.GetValues で全 Key を走査 (Unity InputSystem 版差に強い)。
-            // None / AnyKey / IMESelected は仮想キーや特殊状態のため除外する。
-            foreach (Key key in System.Enum.GetValues(typeof(Key)))
+            // 起動時にキャッシュした全 Key 配列を走査 (Unity InputSystem 版差に強い)。
+            foreach (var key in s_capturableKeys)
             {
-                if (key == Key.None) continue;
-                // IMESelected は [Obsolete] enum 値、AnyKey は仮想キー。直接参照せず name で除外する
-                // (Unity 版差で名前が変わっても列挙ベース判定なら build break しない)
-                var keyName = key.ToString();
-                if (keyName == "IMESelected" || keyName == "AnyKey") continue;
                 try
                 {
                     if (kb[key].wasPressedThisFrame)

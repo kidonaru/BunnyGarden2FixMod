@@ -118,6 +118,10 @@ public class UITDropdown : VisualElement
             pickingMode = PickingMode.Ignore,
         };
         m_button.Add(m_caret);
+
+        // 自要素が panel から外れた瞬間に scrim/popup を確実に回収する。
+        // visualTree 直下に貼った scrim は親子関係上自動破棄されないため、ここで明示的に閉じる。
+        RegisterCallback<DetachFromPanelEvent>(_ => ClosePopup());
     }
 
     public void Setup(string label, IReadOnlyList<string> options, Font font = null)
