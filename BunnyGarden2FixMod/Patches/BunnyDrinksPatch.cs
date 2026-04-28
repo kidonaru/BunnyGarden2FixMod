@@ -3,6 +3,7 @@ using GB;
 using HarmonyLib;
 using GB.Game.Params;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace BunnyGarden2FixMod.Patches;
 
@@ -27,6 +28,7 @@ public class AddBunnyDrinksToDrinkSetParamsPatch
         DrinkMenus.BUNNY_MAX,
         DrinkMenus.BUNNY_PUNCH
     };
+
     private static void Postfix(ref List<DrinkParam> __result)
     {
         if (!Plugin.ConfigBunnyDrinksEnabled.Value) return;
@@ -34,21 +36,60 @@ public class AddBunnyDrinksToDrinkSetParamsPatch
 
         // 全ドリンクリストを取得
         List<DrinkParam> allDrinks = GBSystem.Instance.RefDrinkParams();
+        if(allDrinks == null) return;
 
+        // 新しいリスト
+        List<DrinkParam> newDrinkList = new List<DrinkParam>();
+
+        // バニードリンクを挿入する位置としてシャンパンを特定
+        DrinkParam CHAMPAGNE = allDrinks.Count > (int)DrinkMenus.RUSTI ? allDrinks[(int)DrinkMenus.RUSTI] : null;
+
+        bool injected = false;
+
+        // 既にバニー系が入っているか事前チェック（二重追加防止）
         foreach (var menuId in targetMenus)
         {
-            // インデックスの境界チェック
             int idx = (int)menuId;
-            if(idx < 0 || idx >= allDrinks.Count) continue;
-
-            // すでにリストに入っていないか確認
-            // allDrinks[(int)menuId] で取得したインスタンスそのものが含まれているかチェック
-            DrinkParam bunnyDrink = allDrinks[idx];
-            if (!__result.Contains(bunnyDrink))
+            if (idx >= 0 && idx < allDrinks.Count && __result.Contains(allDrinks[idx]))
             {
-                __result.Add(bunnyDrink);
-                PatchLogger.LogDebug($"[BunnyDrinksPatch] バニー系ドリンクをメニューに追加しました。 DrinkMenus: {menuId}");
+                injected = true;
+                break;
             }
         }
+
+        // バニードリンクを追加する関数
+        void InjectBunnyDrinks()
+        {
+            if (injected) return;
+            foreach (var menuId in targetMenus)
+            {
+                int idx = (int)menuId;
+                if(idx >= 0 && idx < allDrinks.Count)
+                {
+                    // バニードリンクを追加
+                    newDrinkList.Add(allDrinks[idx]);
+                }
+            }
+            injected = true;
+            PatchLogger.LogInfo($"[BunnyDrinksPatch] バニー系ドリンクをメニューに追加しました。({string.Join(" / ", targetMenus)})");
+        }
+
+        foreach (var drink in __result)
+        {
+            // シャンパンが見つかったらその直前にバニードリンクを追加する
+            if(drink == CHAMPAGNE)
+            {
+                InjectBunnyDrinks();
+            }
+            newDrinkList.Add(drink);
+        }
+
+        // バニードリンクが追加されなければ，最後尾にバニードリンクを追加する
+        if(!injected)
+        {
+            InjectBunnyDrinks();
+        }
+
+        __result = newDrinkList;
     }
 }
