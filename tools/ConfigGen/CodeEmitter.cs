@@ -150,6 +150,15 @@ public static class CodeEmitter
             sb.AppendLine("            Kind     = global::BunnyGarden2FixMod.Patches.Settings.UIKind.Toggle,");
             sb.AppendLine($"            Accessor = new global::BunnyGarden2FixMod.Patches.Settings.BoolAccessor(() => {e.Name}),");
         }
+        else if (e.Ui.Kind == "dropdown")
+        {
+            // enum メンバ列挙はランタイムで Enum.GetNames を呼ぶ。
+            // EnumAccessor<T> 内の Enum.GetValues と同一順序が保証されるため index ズレが起きない。
+            var enumType = e.EnumType!;
+            sb.AppendLine("            Kind            = global::BunnyGarden2FixMod.Patches.Settings.UIKind.Dropdown,");
+            sb.AppendLine($"            DropdownOptions = global::System.Enum.GetNames(typeof(global::{enumType})),");
+            sb.AppendLine($"            Accessor        = new global::BunnyGarden2FixMod.Patches.Settings.EnumAccessor<global::{enumType}>(() => {e.Name}),");
+        }
         else // slider
         {
             var min = FormatNumberInvariant(e.Range![0]);

@@ -77,6 +77,8 @@
       description: |
         Off / FXAA / TAA / MSAA2x / MSAA4x / MSAA8x。
         右にいくほど画質が向上しますが動作が重くなります。
+      ui:
+        kind: dropdown
 
     - name: DisableChromaticAberration
       label: 色収差(画面端のにじみ)を無効化
@@ -275,6 +277,8 @@
         PNG : 無劣化圧縮。サイズ 1/5〜1/20・エンコード 50〜200ms/枚。既定。
         JPG : 劣化圧縮。サイズ 1/20〜1/50・エンコード 30〜100ms/枚。
         エンコードはシャッター時に 1 度のみ走ります。読み込みは magic byte による自動判別です。
+      ui:
+        kind: dropdown
 
     - name: ChekiJpgQuality
       label: JPG 品質

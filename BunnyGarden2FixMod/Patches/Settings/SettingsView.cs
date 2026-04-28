@@ -13,7 +13,7 @@ namespace BunnyGarden2FixMod.Patches.Settings;
 /// <summary>
 /// F9 設定パネルのビュー。
 /// サイドバー（カテゴリ一覧） + コンテンツ（選択カテゴリの行群）の 2 カラム構成。
-/// Configs.UIEntries を foreach して UITSwitch / UITSlider 行を生成する。
+/// Configs.UIEntries を foreach して UITSwitch / UITSlider / UITDropdown 行を生成する。
 /// </summary>
 public class SettingsView : MonoBehaviour
 {
@@ -42,8 +42,9 @@ public class SettingsView : MonoBehaviour
     {
         public UIEntryMeta Entry;
         public VisualElement Row;
-        public UITSwitch Switch;   // Toggle のときのみ非 null
-        public UITSlider Slider;   // Slider のときのみ非 null
+        public UITSwitch Switch;     // Toggle のときのみ非 null
+        public UITSlider Slider;     // Slider のときのみ非 null
+        public UITDropdown Dropdown; // Dropdown のときのみ非 null
     }
 
     private void Awake()
@@ -299,6 +300,12 @@ public class SettingsView : MonoBehaviour
 
     private void RenderContent()
     {
+        // 旧行が dropdown を開いていた場合、Clear する前にポップアップ overlay を回収する
+        // （ポップアップは row 階層ではなく panel.visualTree 直下に挿入されているため）。
+        foreach (var h in m_currentRows)
+        {
+            if (h.Dropdown != null && h.Dropdown.IsPopupOpen) h.Dropdown.ClosePopup();
+        }
         m_content.Clear();
         m_currentRows.Clear();
         // カテゴリ切替時に残留 tooltip を非表示にする
@@ -316,9 +323,10 @@ public class SettingsView : MonoBehaviour
         for (int i = 0; i < entries.Count; i++)
         {
             var entry = entries[i];
-            var (row, sw, sl) = BuildRow(entry);
+            // TODO: UI 種別が 4 つ目になったら、タプル戻りを止めて RowHandle を直接返す形にリファクタする。
+            var (row, sw, sl, dd) = BuildRow(entry);
             m_content.Add(row);
-            m_currentRows.Add(new RowHandle { Entry = entry, Row = row, Switch = sw, Slider = sl });
+            m_currentRows.Add(new RowHandle { Entry = entry, Row = row, Switch = sw, Slider = sl, Dropdown = dd });
         }
         ApplyRowHighlight();
 
@@ -344,7 +352,7 @@ public class SettingsView : MonoBehaviour
         RenderContent();
     }
 
-    private (VisualElement row, UITSwitch sw, UITSlider sl) BuildRow(UIEntryMeta entry)
+    private (VisualElement row, UITSwitch sw, UITSlider sl, UITDropdown dd) BuildRow(UIEntryMeta entry)
     {
         var row = new VisualElement();
         row.style.flexDirection = FlexDirection.Row;
@@ -391,7 +399,19 @@ public class SettingsView : MonoBehaviour
             // なので、target が row 自身のときだけ拾うことで二重 toggle を防ぐ。
             row.RegisterCallback<ClickEvent>(evt => { if (evt.target == row) sw.Toggle(); });
             row.Add(sw);
-            return (row, sw, null);
+            return (row, sw, null, null);
+        }
+        else if (entry.Kind == UIKind.Dropdown)
+        {
+            var dd = new UITDropdown();
+            dd.Setup(entry.Label, entry.DropdownOptions, m_font);
+            // EnumAccessor.GetFloat() は Enum.GetValues 上の index を返す。
+            dd.SetIndex((int)Math.Round(entry.Accessor.GetFloat()));
+            dd.OnValueChanged += i => entry.Accessor.SetFloat(i);
+            // row 余白クリックでもポップアップを開けるようにする（ボタン外側帯のクリックを取りこぼさない）。
+            row.RegisterCallback<ClickEvent>(evt => { if (evt.target == row) dd.TogglePopup(); });
+            row.Add(dd);
+            return (row, null, null, dd);
         }
         else
         {
@@ -409,7 +429,7 @@ public class SettingsView : MonoBehaviour
             sl.SetStep(entry.SliderStep);
             sl.OnValueChanged += v => entry.Accessor.SetFloat(v);
             row.Add(sl);
-            return (row, null, sl);
+            return (row, null, sl, null);
         }
     }
 
@@ -441,6 +461,12 @@ public class SettingsView : MonoBehaviour
     public void Hide()
     {
         if (m_root == null) return;
+        // 開いている dropdown ポップアップは panel.visualTree 直下にあるため、
+        // パネル display を None にしても残ることがある。明示的に閉じる。
+        foreach (var h in m_currentRows)
+        {
+            if (h.Dropdown != null && h.Dropdown.IsPopupOpen) h.Dropdown.ClosePopup();
+        }
         m_root.style.display = DisplayStyle.None;
     }
 
@@ -475,23 +501,26 @@ public class SettingsView : MonoBehaviour
     {
         if (m_selectedRowIndex < 0 || m_selectedRowIndex >= m_currentRows.Count) return;
         var h = m_currentRows[m_selectedRowIndex];
-        if (h.Slider != null)      NudgeSelectedSlider(shift ? -10 : -1);
-        else if (h.Switch != null) h.Switch.SetValue(false);
+        if (h.Slider != null)        NudgeSelectedSlider(shift ? -10 : -1);
+        else if (h.Dropdown != null) h.Dropdown.Cycle(-1); // shift は無視（要素数が少ないため）
+        else if (h.Switch != null)   h.Switch.SetValue(false);
     }
 
     public void HandleKeyArrowRight(bool shift)
     {
         if (m_selectedRowIndex < 0 || m_selectedRowIndex >= m_currentRows.Count) return;
         var h = m_currentRows[m_selectedRowIndex];
-        if (h.Slider != null)      NudgeSelectedSlider(shift ? +10 : +1);
-        else if (h.Switch != null) h.Switch.SetValue(true);
+        if (h.Slider != null)        NudgeSelectedSlider(shift ? +10 : +1);
+        else if (h.Dropdown != null) h.Dropdown.Cycle(+1);
+        else if (h.Switch != null)   h.Switch.SetValue(true);
     }
 
     public void HandleKeyConfirm()
     {
         if (m_selectedRowIndex < 0 || m_selectedRowIndex >= m_currentRows.Count) return;
         var h = m_currentRows[m_selectedRowIndex];
-        if (h.Switch != null) h.Switch.Toggle();
+        if (h.Switch != null)        h.Switch.Toggle();
+        else if (h.Dropdown != null) h.Dropdown.Cycle(+1);
     }
 
     public void HandleKeyTabNext()

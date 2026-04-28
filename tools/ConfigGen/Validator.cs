@@ -98,9 +98,9 @@ public static class Validator
 
             if (e.Ui != null)
             {
-                var validKinds = new[] { "toggle", "slider" };
+                var validKinds = new[] { "toggle", "slider", "dropdown" };
                 if (!validKinds.Contains(e.Ui.Kind))
-                    errors.Add($"[{e.Name}] ui.kind must be toggle/slider (got: {e.Ui.Kind})");
+                    errors.Add($"[{e.Name}] ui.kind must be toggle/slider/dropdown (got: {e.Ui.Kind})");
 
                 if (e.Ui.Kind == "toggle" && e.Type != "bool")
                     errors.Add($"[{e.Name}] ui.kind=toggle requires type=bool (got: {e.Type})");
@@ -115,6 +115,20 @@ public static class Validator
                         errors.Add($"[{e.Name}] ui.kind=slider requires ui.step");
                     if (string.IsNullOrEmpty(e.Ui.Format))
                         errors.Add($"[{e.Name}] ui.kind=slider requires ui.format");
+                }
+
+                if (e.Ui.Kind == "dropdown")
+                {
+                    if (e.Type != "enum")
+                        errors.Add($"[{e.Name}] ui.kind=dropdown requires type=enum (got: {e.Type})");
+                    if (string.IsNullOrEmpty(e.EnumType))
+                        errors.Add($"[{e.Name}] ui.kind=dropdown requires enumType");
+                    if (e.Range != null)
+                        errors.Add($"[{e.Name}] ui.kind=dropdown must not specify range");
+                    if (e.Ui.Step != null)
+                        errors.Add($"[{e.Name}] ui.kind=dropdown must not specify ui.step");
+                    if (!string.IsNullOrEmpty(e.Ui.Format))
+                        errors.Add($"[{e.Name}] ui.kind=dropdown must not specify ui.format");
                 }
             }
         }
