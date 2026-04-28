@@ -38,16 +38,17 @@ public class AddBunnyDrinksToDrinkSetParamsPatch
         foreach (var menuId in targetMenus)
         {
             // インデックスの境界チェック
-            if((int)menuId >= allDrinks.Count) continue;
+            int idx = (int)menuId;
+            if(idx < 0 || idx >= allDrinks.Count) continue;
 
             // すでにリストに入っていないか確認
             // allDrinks[(int)menuId] で取得したインスタンスそのものが含まれているかチェック
-            DrinkParam bunnyDrink = allDrinks[(int)menuId];
+            DrinkParam bunnyDrink = allDrinks[idx];
             if (!__result.Contains(bunnyDrink))
             {
                 __result.Add(bunnyDrink);
+                PatchLogger.LogDebug($"[BunnyDrinksPatch] バニー系ドリンクをメニューに追加しました。 DrinkMenus: {menuId}");
             }
         }
-        PatchLogger.LogInfo($"バニードリンクをメニューに追加しました: {string.Join(" / ", targetMenus)}");
     }
 }
