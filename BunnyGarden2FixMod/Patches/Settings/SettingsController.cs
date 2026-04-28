@@ -60,6 +60,34 @@ public class SettingsController : MonoBehaviour
 
         if (!m_view.IsShown) return;
 
+        // ── KeyBinding キャプチャ中: 通常ナビゲーションをスキップしてキー押下を View に渡す ──
+        if (m_view.IsCapturingKey)
+        {
+            // Enum.GetValues で全 Key を走査 (Unity InputSystem 版差に強い)。
+            // None / AnyKey / IMESelected は仮想キーや特殊状態のため除外する。
+            foreach (Key key in System.Enum.GetValues(typeof(Key)))
+            {
+                if (key == Key.None) continue;
+                // IMESelected は [Obsolete] enum 値、AnyKey は仮想キー。直接参照せず name で除外する
+                // (Unity 版差で名前が変わっても列挙ベース判定なら build break しない)
+                var keyName = key.ToString();
+                if (keyName == "IMESelected" || keyName == "AnyKey") continue;
+                try
+                {
+                    if (kb[key].wasPressedThisFrame)
+                    {
+                        m_view.HandleCapturedKey(key);
+                        return;
+                    }
+                }
+                catch
+                {
+                    // 一部の Key 値は kb[key] でアクセスエラーになる可能性 (Unity 版差) → 無視
+                }
+            }
+            return;
+        }
+
         // ── Esc: 閉じる ───────────────────
         if (kb[Key.Escape].wasPressedThisFrame)
         {

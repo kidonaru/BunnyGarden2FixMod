@@ -159,6 +159,15 @@ public static class CodeEmitter
             sb.AppendLine($"            DropdownOptions = global::System.Enum.GetNames(typeof(global::{enumType})),");
             sb.AppendLine($"            Accessor        = new global::BunnyGarden2FixMod.Patches.Settings.EnumAccessor<global::{enumType}>(() => {e.Name}),");
         }
+        else if (e.Ui.Kind == "keybinding")
+        {
+            // hotkey 専用: HotkeyProvider 経由で KeyConfig / ButtonConfig に直接アクセス。
+            // DropdownOptions は Pad ボタン側で使う (ControllerButton 列挙)。
+            // Accessor は KeyBinding 行では未使用 (null のまま)。
+            sb.AppendLine("            Kind            = global::BunnyGarden2FixMod.Patches.Settings.UIKind.KeyBinding,");
+            sb.AppendLine($"            HotkeyProvider  = () => {e.Name},");
+            sb.AppendLine("            DropdownOptions = global::System.Enum.GetNames(typeof(global::BunnyGarden2FixMod.Utils.ControllerButton)),");
+        }
         else // slider
         {
             var min = FormatNumberInvariant(e.Range![0]);
