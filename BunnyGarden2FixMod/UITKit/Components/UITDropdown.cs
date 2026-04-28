@@ -305,6 +305,47 @@ public class UITDropdown : VisualElement
         m_popup.style.visibility = Visibility.Visible;
     }
 
+    /// <summary>
+    /// ドロップダウン全体の幅を固定する（0 以下なら可変に戻す）。
+    /// 内部 m_button の minWidth も上書きして kButtonMinWidth 制約を解除する。
+    /// </summary>
+    public UITDropdown SetWidth(float width)
+    {
+        if (width > 0)
+        {
+            style.width = width;
+            style.minWidth = width;
+            style.maxWidth = width;
+            style.flexGrow = 0;
+            style.flexShrink = 0;
+            // m_button は default では auto width のため、親 (UITDropdown) の幅と合わない。
+            // 明示的に同じ width に揃えて minWidth=0 で kButtonMinWidth 制約を解除する。
+            m_button.style.width = width;
+            m_button.style.minWidth = 0;
+            m_button.style.maxWidth = width;
+        }
+        else
+        {
+            style.width = StyleKeyword.Auto;
+            style.minWidth = StyleKeyword.Auto;
+            style.maxWidth = StyleKeyword.Auto;
+            style.flexGrow = 1;
+            style.flexShrink = 1;
+            m_button.style.width = StyleKeyword.Auto;
+            m_button.style.minWidth = kButtonMinWidth;
+            m_button.style.maxWidth = StyleKeyword.Auto;
+        }
+        return this;
+    }
+
+    /// <summary>内部の値ラベルとキャレットのフォントサイズを変更する（幅固定時の長テキスト対策）。</summary>
+    public UITDropdown SetButtonFontSize(int px)
+    {
+        if (m_valueLabel != null) m_valueLabel.style.fontSize = px;
+        if (m_caret != null) m_caret.style.fontSize = Mathf.Max(6, px - 2);
+        return this;
+    }
+
     private void RefreshValueLabel()
     {
         m_valueLabel.text = m_options.Length == 0 ? "-" : m_options[Index];

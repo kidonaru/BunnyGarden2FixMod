@@ -27,6 +27,13 @@ public class SettingsController : MonoBehaviour
         return Instance != null && Instance.m_view != null && Instance.m_view.IsPointerOverPanel();
     }
 
+    /// <summary>
+    /// いずれかのキーバインド行でキャプチャ中かどうかを返す。
+    /// HotkeyConfig / Suppress パッチからキャプチャ中の入力遮断判定に使用する。
+    /// </summary>
+    public static bool IsAnyCapturing =>
+        Instance != null && Instance.m_view != null && Instance.m_view.IsCapturingKey;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -63,6 +70,21 @@ public class SettingsController : MonoBehaviour
         // ── KeyBinding キャプチャ中: 通常ナビゲーションをスキップしてキー押下を View に渡す ──
         if (m_view.IsCapturingKey)
         {
+            // パネル外でのマウスクリックでもキャプチャを解除する (パネル内クリックは
+            // SettingsView の MouseDownEvent ハンドラ側で処理され、ここには届かない)。
+            var mouse = Mouse.current;
+            if (mouse != null)
+            {
+                bool clicked = mouse.leftButton.wasPressedThisFrame
+                            || mouse.rightButton.wasPressedThisFrame
+                            || mouse.middleButton.wasPressedThisFrame;
+                if (clicked && !m_view.IsPointerOverPanel())
+                {
+                    m_view.CancelKeyCapture();
+                    return;
+                }
+            }
+
             // Enum.GetValues で全 Key を走査 (Unity InputSystem 版差に強い)。
             // None / AnyKey / IMESelected は仮想キーや特殊状態のため除外する。
             foreach (Key key in System.Enum.GetValues(typeof(Key)))

@@ -38,6 +38,9 @@ public class SettingsView : MonoBehaviour
 
     public bool IsCapturingKey => m_isCapturingKey;
 
+    // キャプチャ中ヒント表示用 Label（BuildPanel で生成、非表示で待機）
+    private Label m_captureHintLabel;
+
     // 自前 tooltip 用フィールド（Unity UI Toolkit の tooltip プロパティは BepInEx ランタイムで表示されない）
     private Label m_tooltipLabel;
     private IVisualElementScheduledItem m_tooltipShowTimer;
@@ -174,6 +177,29 @@ public class SettingsView : MonoBehaviour
             }
         }, TrickleDown.TrickleDown);
 
+        // キャプチャ中にパネル内の別の場所をクリックしたらキャプチャを解除する。
+        // TrickleDown で子要素の ClickEvent より先に拾い、StartKeyCapture の再入ガードと二重防御する。
+        // ただし現在キャプチャ中のボタン自身またはその祖先がクリックされた場合は解除しない。
+        m_root.RegisterCallback<MouseDownEvent>(evt =>
+        {
+            if (!m_isCapturingKey) return;
+            // 現在キャプチャ中の KeyCapBtn を特定する
+            var activeBtn = (m_capturingRowIndex >= 0 && m_capturingRowIndex < m_currentRows.Count)
+                ? m_currentRows[m_capturingRowIndex].KeyCapBtn
+                : null;
+            // クリック対象が activeBtn またはその子孫の場合は解除しない
+            if (activeBtn != null && evt.target is VisualElement ve)
+            {
+                var node = ve;
+                while (node != null)
+                {
+                    if (ReferenceEquals(node, activeBtn)) return;
+                    node = node.parent;
+                }
+            }
+            CancelKeyCapture();
+        }, TrickleDown.TrickleDown);
+
         // 自前 tooltip 用のフローティング Label を m_root に追加する。
         // Unity UI Toolkit の `tooltip` プロパティは BepInEx ランタイムでは表示されないことがあるため、
         // MouseEnter / Leave イベントで自前管理する。
@@ -197,6 +223,20 @@ public class SettingsView : MonoBehaviour
         m_tooltipLabel.pickingMode = PickingMode.Ignore;
         if (m_font != null) m_tooltipLabel.style.unityFont = m_font;
         m_root.Add(m_tooltipLabel);
+
+        // キャプチャ中ヒント: パネル下端に固定表示。StartKeyCapture で表示、解除時に非表示。
+        m_captureHintLabel = new Label("任意のキーを押してください  Esc=キャンセル / BS,Del=未割当");
+        m_captureHintLabel.style.color = new Color(1f, 0.85f, 0.4f, 1f); // 黄色系ヒント色
+        m_captureHintLabel.style.fontSize = 10;
+        m_captureHintLabel.style.paddingTop = 4;
+        m_captureHintLabel.style.paddingBottom = 4;
+        m_captureHintLabel.style.paddingLeft = 12;
+        m_captureHintLabel.style.paddingRight = 12;
+        m_captureHintLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+        m_captureHintLabel.style.backgroundColor = new Color(0.094f, 0.110f, 0.153f, 1f); // sidebar と同色
+        m_captureHintLabel.style.display = DisplayStyle.None;
+        if (m_font != null) m_captureHintLabel.style.unityFont = m_font;
+        m_root.Add(m_captureHintLabel);
 
         BuildSidebar();
         RenderContent();
@@ -464,13 +504,25 @@ public class SettingsView : MonoBehaviour
                 return new RowHandle { Entry = entry, Row = row };
             }
 
-            // ── KB 側ボタン（クリックでキャプチャ開始）──
+            // ── KB 側ボタン（クリックでキャプチャ開始）幅 50px 固定 ──
             var kbBtn = new UITButton();
             var kbText = FormatKeyText(hotkey.KeyConfig?.Value);
             kbBtn.Setup(kbText, () => StartKeyCapture(entry), m_font);
             kbBtn.SetVariant(UITButton.Variant.Subtle);
-            kbBtn.style.minWidth = 60;
+            kbBtn.SetWidth(50);
+            kbBtn.style.flexGrow = 0;
+            kbBtn.style.flexShrink = 0;
             kbBtn.style.marginLeft = 4;
+            // 内部 label の fontSize を縮小して "Backspace" 等の長テキストを収める。
+            // 50px に収まらない場合は ellipsis で末尾省略（"Backspace" は "Backsp..." 等になり得る）。
+            var kbInnerLabel = kbBtn.Q<Label>();
+            if (kbInnerLabel != null)
+            {
+                kbInnerLabel.style.fontSize = 9;
+                kbInnerLabel.style.whiteSpace = WhiteSpace.NoWrap;
+                kbInnerLabel.style.overflow = Overflow.Hidden;
+                kbInnerLabel.style.textOverflow = TextOverflow.Ellipsis;
+            }
             row.Add(kbBtn);
 
             // ── 区切り "/" ──
@@ -482,13 +534,14 @@ public class SettingsView : MonoBehaviour
             if (m_font != null) sep.style.unityFont = m_font;
             row.Add(sep);
 
-            // ── Pad 側 dropdown ──
+            // ── Pad 側 dropdown 幅 50px 固定 ──
             var padDd = new UITDropdown();
             padDd.Setup(string.Empty, entry.DropdownOptions, m_font);
             int padIdx = ResolvePadIndex(entry.DropdownOptions, hotkey.ButtonConfig?.Value);
             padDd.SetIndex(padIdx);
             padDd.OnValueChanged += i => OnPadChanged(entry, i);
-            padDd.style.minWidth = 80;
+            padDd.SetWidth(50);
+            padDd.SetButtonFontSize(9);
             row.Add(padDd);
 
             return new RowHandle { Entry = entry, Row = row, KeyCapBtn = kbBtn, PadDropdown = padDd };
@@ -671,6 +724,9 @@ public class SettingsView : MonoBehaviour
     /// <summary>指定エントリの KB キャプチャモードを開始する。</summary>
     private void StartKeyCapture(UIEntryMeta entry)
     {
+        // 既にキャプチャ中なら他行への切り替えを禁止する（再入ガード）
+        if (m_isCapturingKey) return;
+
         int idx = -1;
         for (int i = 0; i < m_currentRows.Count; i++)
         {
@@ -682,13 +738,15 @@ public class SettingsView : MonoBehaviour
         m_capturingRowIndex = idx;
         var btn = m_currentRows[idx].KeyCapBtn;
         if (btn != null) btn.SetText("...");
+        // キャプチャ開始時にヒントを表示する
+        if (m_captureHintLabel != null) m_captureHintLabel.style.display = DisplayStyle.Flex;
     }
 
     /// <summary>
     /// キャプチャモードをキャンセルしボタン表示を元の値に戻す。
     /// m_isCapturingKey == false のときは何もしない冪等な実装。
     /// </summary>
-    private void CancelKeyCapture()
+    public void CancelKeyCapture()
     {
         if (!m_isCapturingKey) return;
         m_isCapturingKey = false;
@@ -700,6 +758,8 @@ public class SettingsView : MonoBehaviour
             var hotkey = h.Entry.HotkeyProvider?.Invoke();
             if (h.KeyCapBtn != null) h.KeyCapBtn.SetText(FormatKeyText(hotkey?.KeyConfig?.Value));
         }
+        // キャプチャ解除時にヒントを非表示にする
+        if (m_captureHintLabel != null) m_captureHintLabel.style.display = DisplayStyle.None;
     }
 
     /// <summary>
@@ -761,6 +821,8 @@ public class SettingsView : MonoBehaviour
 
         m_isCapturingKey = false;
         m_capturingRowIndex = -1;
+        // キー確定時にヒントを非表示にする
+        if (m_captureHintLabel != null) m_captureHintLabel.style.display = DisplayStyle.None;
         // RenderContent はイベント発火中の VisualElement 破棄を避けるため次フレームに遅延する。
         m_root?.schedule.Execute(RenderContent).StartingIn(0);
     }
