@@ -22,17 +22,112 @@ public class SettingsController : MonoBehaviour
 
     private SettingsView m_view;
 
-    public static bool ShouldSuppressMouseInput()
-    {
-        return Instance != null && Instance.m_view != null && Instance.m_view.IsPointerOverPanel();
-    }
+    // ── キャプチャ状態 ────────────────────────────────────────────────────────
+    private bool m_isCapturingKey;
+    private UIEntryMeta m_capturingEntry; // row index ではなく entry 参照を持つ (RenderContent で row が再構築されても entry は安定)
+
+    /// <summary>このコントローラーがキャプチャ中かどうか。</summary>
+    public bool IsCapturingKey => m_isCapturingKey;
+
+    /// <summary>キャプチャ中のエントリ参照。SettingsView の UI 操作に使用。</summary>
+    internal UIEntryMeta CapturingEntry => m_capturingEntry;
 
     /// <summary>
     /// いずれかのキーバインド行でキャプチャ中かどうかを返す。
     /// HotkeyConfig / Suppress パッチからキャプチャ中の入力遮断判定に使用する。
     /// </summary>
     public static bool IsAnyCapturing =>
-        Instance != null && Instance.m_view != null && Instance.m_view.IsCapturingKey;
+        Instance != null && Instance.m_isCapturingKey;
+
+    /// <summary>キーバインドキャプチャ中、もしくは Plugin の Suppress 期間中。Mod / 本体の入力を遮断する判定として使用。</summary>
+    public static bool ShouldSuppressHotkey()
+    {
+        return IsAnyCapturing || Plugin.ShouldSuppressGameInput();
+    }
+
+    public static bool ShouldSuppressMouseInput()
+    {
+        return Instance != null && Instance.m_view != null && Instance.m_view.IsPointerOverPanel();
+    }
+
+    // ── キャプチャ操作 API ────────────────────────────────────────────────────
+
+    /// <summary>指定エントリの KB キャプチャモードを開始する。</summary>
+    public void StartKeyCapture(UIEntryMeta entry)
+    {
+        if (m_isCapturingKey) return; // 再入禁止
+        if (entry == null || entry.Kind != UIKind.KeyBinding) return;
+        m_isCapturingKey = true;
+        m_capturingEntry = entry;
+        m_view?.OnCaptureStarted(entry);
+    }
+
+    /// <summary>キャプチャモードをキャンセルする。キャプチャ中でなければ何もしない冪等な実装。</summary>
+    public void CancelKeyCapture()
+    {
+        if (!m_isCapturingKey) return;
+        var entry = m_capturingEntry;
+        m_isCapturingKey = false;
+        m_capturingEntry = null;
+        m_view?.OnCaptureEnded(entry);
+    }
+
+    /// <summary>
+    /// キャプチャ中のキー押下を受け取って確定処理を行う。
+    /// Esc → キャンセル, Backspace/Delete → None, 他 → そのキーを確定。
+    /// 確定後は全 KeyBinding 行に対し衝突スワップ → 1 フレーム ゲーム入力抑止 → 再描画。
+    /// </summary>
+    public void HandleCapturedKey(UnityEngine.InputSystem.Key k)
+    {
+        if (!m_isCapturingKey) return;
+        var entry = m_capturingEntry;
+        if (entry == null) { m_isCapturingKey = false; return; }
+
+        if (k == UnityEngine.InputSystem.Key.Escape)
+        {
+            CancelKeyCapture();
+            return;
+        }
+
+        var newKey = (k == UnityEngine.InputSystem.Key.Backspace || k == UnityEngine.InputSystem.Key.Delete)
+            ? UnityEngine.InputSystem.Key.None
+            : k;
+
+        var hotkey = entry.HotkeyProvider?.Invoke();
+        if (hotkey?.KeyConfig == null)
+        {
+            CancelKeyCapture();
+            return;
+        }
+
+        // 値代入の前に Suppress を呼ぶ（代入で SettingChanged 発火が即時 hotkey 評価につながる経路を塞ぐ）
+        Plugin.SuppressGameInputTemporarily();
+
+        var oldKey = hotkey.KeyConfig.Value;
+        hotkey.KeyConfig.Value = newKey;
+
+        // 衝突スワップ: 全 KeyBinding 行を走査し、newKey と被るエントリの値を oldKey に書き換える
+        if (newKey != UnityEngine.InputSystem.Key.None)
+        {
+            foreach (var other in Configs.UIEntries)
+            {
+                if (other.Kind != UIKind.KeyBinding) continue;
+                if (ReferenceEquals(other, entry)) continue;
+                var otherHk = other.HotkeyProvider?.Invoke();
+                if (otherHk?.KeyConfig == null) continue;
+                if (otherHk.KeyConfig.Value == newKey)
+                {
+                    otherHk.KeyConfig.Value = oldKey;
+                    PatchLogger.LogInfo($"[KeyBinding] キー衝突: '{other.Label}' を {newKey}→{oldKey} にスワップ");
+                }
+            }
+        }
+
+        m_isCapturingKey = false;
+        m_capturingEntry = null;
+        m_view?.OnCaptureEnded(entry);
+        m_view?.RequestRebuild();
+    }
 
     private void Awake()
     {
@@ -67,8 +162,8 @@ public class SettingsController : MonoBehaviour
 
         if (!m_view.IsShown) return;
 
-        // ── KeyBinding キャプチャ中: 通常ナビゲーションをスキップしてキー押下を View に渡す ──
-        if (m_view.IsCapturingKey)
+        // ── KeyBinding キャプチャ中: 通常ナビゲーションをスキップしてキー押下を処理する ──
+        if (m_isCapturingKey)
         {
             // パネル外でのマウスクリックでもキャプチャを解除する (パネル内クリックは
             // SettingsView の MouseDownEvent ハンドラ側で処理され、ここには届かない)。
@@ -80,7 +175,7 @@ public class SettingsController : MonoBehaviour
                             || mouse.middleButton.wasPressedThisFrame;
                 if (clicked && !m_view.IsPointerOverPanel())
                 {
-                    m_view.CancelKeyCapture();
+                    CancelKeyCapture();
                     return;
                 }
             }
@@ -98,7 +193,7 @@ public class SettingsController : MonoBehaviour
                 {
                     if (kb[key].wasPressedThisFrame)
                     {
-                        m_view.HandleCapturedKey(key);
+                        HandleCapturedKey(key);
                         return;
                     }
                 }

@@ -105,11 +105,17 @@ public class Plugin : BaseUnityPlugin
         PatchLogger.LogInfo($"フリーカメラを自動解除しました: {reason}");
     }
 
+    /// <summary>
+    /// 一定時間 (0.18 秒) ゲーム本体側の入力およびホットキー判定を抑止する。
+    /// コントローラーショートカット発火後の連続発火防止と、KeyBinding キャプチャ確定後の
+    /// 同一キー再評価防止に使用。
+    /// </summary>
     public static void SuppressGameInputTemporarily()
     {
         suppressGameInputUntilUnscaledTime = Time.unscaledTime + ControllerShortcutSuppressDuration;
     }
 
+    /// <summary>SuppressGameInputTemporarily 期間中なら true。</summary>
     internal static bool ShouldSuppressGameInput()
     {
         return Time.unscaledTime < suppressGameInputUntilUnscaledTime;
