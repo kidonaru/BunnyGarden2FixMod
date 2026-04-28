@@ -23,6 +23,10 @@ public static class ConfigMigration
         new("HideUI", "Enabled"),
     ];
 
+    // NOTE: Migrations は配列順に適用される（ArrayMigration の foreach 順序）。
+    // 例: 第一の "Camera/ControllerToggleFreeCam → Camera/ToggleFreeCamButton" の結果を
+    //     第四の "Camera/ToggleFreeCamButton → Hotkey/ToggleFreeCamButton" がさらに移行する、
+    //     といった連鎖移行が存在する。グループ順を変更すると新規ユーザーの 1 発移行パスが壊れる。
     private static readonly MigrationEntry[] Migrations =
     [
         // 第一
