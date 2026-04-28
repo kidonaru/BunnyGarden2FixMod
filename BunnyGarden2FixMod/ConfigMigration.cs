@@ -58,6 +58,23 @@ public static class ConfigMigration
         new(new("Time", HotkeyConfig.GamepadKey("FrameAdvance")), new("General", HotkeyConfig.GamepadKey("FrameAdvance"))),
         new(new("Time", HotkeyConfig.KeyboardKey("FastForward")), new("General", HotkeyConfig.KeyboardKey("FastForward"))),
         new(new("Time", HotkeyConfig.GamepadKey("FastForward")), new("General", HotkeyConfig.GamepadKey("FastForward"))),
+        // 第四: Hotkey セクション集約 (Camera / General / CostumeChanger に散在していた hotkey を統合)
+        new(new("Camera", HotkeyConfig.KeyboardKey("ToggleFreeCam")), new("Hotkey", HotkeyConfig.KeyboardKey("ToggleFreeCam"))),
+        new(new("Camera", HotkeyConfig.GamepadKey("ToggleFreeCam")), new("Hotkey", HotkeyConfig.GamepadKey("ToggleFreeCam"))),
+        new(new("Camera", HotkeyConfig.KeyboardKey("ToggleFixedFreeCam")), new("Hotkey", HotkeyConfig.KeyboardKey("ToggleFixedFreeCam"))),
+        new(new("Camera", HotkeyConfig.GamepadKey("ToggleFixedFreeCam")), new("Hotkey", HotkeyConfig.GamepadKey("ToggleFixedFreeCam"))),
+        new(new("General", HotkeyConfig.KeyboardKey("ToggleOverlay")), new("Hotkey", HotkeyConfig.KeyboardKey("ToggleOverlay"))),
+        new(new("General", HotkeyConfig.GamepadKey("ToggleOverlay")), new("Hotkey", HotkeyConfig.GamepadKey("ToggleOverlay"))),
+        new(new("General", HotkeyConfig.KeyboardKey("CaptureScreenshot")), new("Hotkey", HotkeyConfig.KeyboardKey("CaptureScreenshot"))),
+        new(new("General", HotkeyConfig.GamepadKey("CaptureScreenshot")), new("Hotkey", HotkeyConfig.GamepadKey("CaptureScreenshot"))),
+        new(new("General", HotkeyConfig.KeyboardKey("ToggleTimeStop")), new("Hotkey", HotkeyConfig.KeyboardKey("ToggleTimeStop"))),
+        new(new("General", HotkeyConfig.GamepadKey("ToggleTimeStop")), new("Hotkey", HotkeyConfig.GamepadKey("ToggleTimeStop"))),
+        new(new("General", HotkeyConfig.KeyboardKey("FrameAdvance")), new("Hotkey", HotkeyConfig.KeyboardKey("FrameAdvance"))),
+        new(new("General", HotkeyConfig.GamepadKey("FrameAdvance")), new("Hotkey", HotkeyConfig.GamepadKey("FrameAdvance"))),
+        new(new("General", HotkeyConfig.KeyboardKey("FastForward")), new("Hotkey", HotkeyConfig.KeyboardKey("FastForward"))),
+        new(new("General", HotkeyConfig.GamepadKey("FastForward")), new("Hotkey", HotkeyConfig.GamepadKey("FastForward"))),
+        new(new("CostumeChanger", HotkeyConfig.KeyboardKey("Show")), new("Hotkey", HotkeyConfig.KeyboardKey("Show"))),
+        new(new("CostumeChanger", HotkeyConfig.GamepadKey("Show")), new("Hotkey", HotkeyConfig.GamepadKey("Show"))),
     ];
 
     public static void Migrate(ConfigFile config)

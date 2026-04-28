@@ -13,6 +13,7 @@ public enum UIKind
     Toggle,
     Slider,
     Dropdown,
+    KeyBinding,
 }
 
 /// <summary>
@@ -37,6 +38,11 @@ public class UIEntryMeta
     // EnumAccessor<T> 内の Enum.GetValues 順序と index を一致させること。
     // codegen は Enum.GetNames(typeof(T)) を出力するため自動一致する。
     public string[] DropdownOptions;
+
+    // KeyBinding 用 (他 Kind 時は null)。
+    // HotkeyConfig はキー (KeyConfig) と Pad ボタン (ButtonConfig) の 2 ConfigEntry を保持する。
+    // 値変更は HotkeyProvider().KeyConfig.Value / .ButtonConfig.Value への直接代入で行う。
+    public Func<global::BunnyGarden2FixMod.Utils.HotkeyConfig> HotkeyProvider;
 
     public IConfigAccessor Accessor;
 }
