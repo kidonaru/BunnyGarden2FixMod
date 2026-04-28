@@ -124,6 +124,7 @@ public class CostumePickerView : MonoBehaviour
     public void ShowPicker(RenderData data)
     {
         EnsureBuilt();
+        ApplyUIScale();
         m_panel.style.display = DisplayStyle.Flex;
         SetMode(ViewMode.Picker);
         Render(data);
@@ -132,9 +133,16 @@ public class CostumePickerView : MonoBehaviour
     public void ShowSettings(SettingsData data)
     {
         EnsureBuilt();
+        ApplyUIScale();
         m_panel.style.display = DisplayStyle.Flex;
         SetMode(ViewMode.Settings);
         RenderSettings(data);
+    }
+
+    // PanelSettings.scale は EnsureBuilt() 時の値を保持するため、開く度に Configs.UIScale を反映する。
+    private void ApplyUIScale()
+    {
+        if (m_settings != null) m_settings.scale = Configs.UIScale.Value;
     }
 
     public void RenderSettings(SettingsData data)

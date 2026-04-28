@@ -2,6 +2,7 @@ using BunnyGarden2FixMod.Utils;
 using Cysharp.Threading.Tasks;
 using GB;
 using GB.Game;
+using GB.Scene;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -105,6 +106,13 @@ public class CostumePickerController : MonoBehaviour
         m_view.OnBackClicked += HandleBackClicked;
         m_view.OnResetAllClicked += HandleResetAllClicked;
         m_view.OnUnlockAllClicked += HandleUnlockAllClicked;
+
+        // F9 設定パネル等から Stocking 系 Config が変更された場合、picker open 中なら即時メッシュ反映する。
+        // ShapeFalloff は blendShape 全 frame の再構築を伴って重いので Update() でデバウンスする。
+        if (Plugin.ConfigStockingOffset != null) Plugin.ConfigStockingOffset.SettingChanged += OnStockingTuneChanged;
+        if (Plugin.ConfigStockingSkinShrink != null) Plugin.ConfigStockingSkinShrink.SettingChanged += OnStockingTuneChanged;
+        if (Plugin.ConfigStockingSkinFalloffRadius != null) Plugin.ConfigStockingSkinFalloffRadius.SettingChanged += OnStockingTuneChanged;
+        if (Plugin.ConfigStockingShapeFalloffRadius != null) Plugin.ConfigStockingShapeFalloffRadius.SettingChanged += OnStockingShapeFalloffChanged;
     }
 
     private void OnDestroy()
@@ -120,8 +128,31 @@ public class CostumePickerController : MonoBehaviour
             m_view.OnResetAllClicked -= HandleResetAllClicked;
             m_view.OnUnlockAllClicked -= HandleUnlockAllClicked;
         }
+        if (Plugin.ConfigStockingOffset != null) Plugin.ConfigStockingOffset.SettingChanged -= OnStockingTuneChanged;
+        if (Plugin.ConfigStockingSkinShrink != null) Plugin.ConfigStockingSkinShrink.SettingChanged -= OnStockingTuneChanged;
+        if (Plugin.ConfigStockingSkinFalloffRadius != null) Plugin.ConfigStockingSkinFalloffRadius.SettingChanged -= OnStockingTuneChanged;
+        if (Plugin.ConfigStockingShapeFalloffRadius != null) Plugin.ConfigStockingShapeFalloffRadius.SettingChanged -= OnStockingShapeFalloffChanged;
         if (Instance == this) Instance = null;
     }
+
+    /// <summary>Offset/SkinShrink/SkinFalloffRadius は SettingChanged を即時反映する。</summary>
+    private void OnStockingTuneChanged(object _, System.EventArgs __)
+    {
+        // picker 非表示中は ReapplyStockingForTune が no-op になる。
+        // 次回 picker open 時の RebuildItemsFor / ApplyStockings 経由で値が反映されるため、ここで何もしない。
+        if (m_view == null || !m_view.IsShown) return;
+        ReapplyStockingForTune();
+    }
+
+    /// <summary>ShapeFalloff の reapply は blendShape 全 frame 再構築を伴って重いため、デバウンスする。</summary>
+    private void OnStockingShapeFalloffChanged(object _, System.EventArgs __)
+    {
+        if (m_view == null || !m_view.IsShown) return;
+        m_shapeFalloffDirtyAtUnscaledTime = Time.unscaledTime + ShapeFalloffDebounceSec;
+    }
+
+    private const float ShapeFalloffDebounceSec = 0.2f;
+    private float m_shapeFalloffDirtyAtUnscaledTime = -1f;
 
     private void HandleTabClicked(int index)
     {
@@ -161,6 +192,12 @@ public class CostumePickerController : MonoBehaviour
 
     private void Update()
     {
+        if (m_shapeFalloffDirtyAtUnscaledTime > 0f && Time.unscaledTime >= m_shapeFalloffDirtyAtUnscaledTime)
+        {
+            m_shapeFalloffDirtyAtUnscaledTime = -1f;
+            ReapplyStockingForTune();
+        }
+
         if (Plugin.ConfigCostumeChangerEnabled == null) return;
         if (!Plugin.ConfigCostumeChangerEnabled.Value) return;
         // Awake で AddComponent<CostumePickerView>() が何らかの理由（例外）で失敗したケース防御。
@@ -175,7 +212,7 @@ public class CostumePickerController : MonoBehaviour
         if (kb == null) return;
 
         // トグル
-        if (kb[Plugin.ConfigCostumeChangerHotkey.Value].wasPressedThisFrame)
+        if (Plugin.ConfigCostumeChangerShow.IsTriggered())
         {
             if (m_view.IsShown)
             {
@@ -749,7 +786,23 @@ public class CostumePickerController : MonoBehaviour
         var env = GBSystem.Instance?.GetActiveEnvScene();
         if (env != null)
         {
-            if (StockingOverrideStore.IsKneeSocksType(type))
+            bool isSwim = IsSwimWear(env, m_activeChar);
+
+            if (isSwim)
+            {
+                // 水着は SwimWearStockingPatch が override store を source of truth として
+                // 全タイプ（0=解除 / 1–4=パンスト / 5–7=ニーソックス）を同期処理する。
+                // type 引数は SwimWearStockingPatch 側で無視されるので 0 を渡す。
+                try
+                {
+                    env.ApplyStockings(m_activeChar, 0);
+                }
+                catch (Exception ex)
+                {
+                    PatchLogger.LogWarning($"[CostumePicker] 水着ストッキング切替失敗: {ex}");
+                }
+            }
+            else if (StockingOverrideStore.IsKneeSocksType(type))
             {
                 // ニーソックス系: 直接メッシュ差し替え（env.ApplyStockings は type 0–4 専用）
                 var charObj = env.FindCharacter(m_activeChar);
@@ -779,6 +832,17 @@ public class CostumePickerController : MonoBehaviour
             }
         }
         m_view.Render(BuildRenderData());
+    }
+
+    /// <summary>
+    /// 現在シーン内の <paramref name="id"/> の CharacterHandle から Costume を取得し、
+    /// SwimWear かどうかを判定する。まだロードされていない／見つからない場合は false。
+    /// </summary>
+    private static bool IsSwimWear(EnvSceneBase env, CharID id)
+    {
+        if (env == null || env.m_characters == null) return false;
+        var handle = env.m_characters.Find(x => x != null && x.GetCharID() == id);
+        return handle?.m_lastLoadArg?.Costume == CostumeType.SwimWear;
     }
 
     private void ResetAllTabs()
@@ -1086,6 +1150,31 @@ public class CostumePickerController : MonoBehaviour
             VisibleCasts = m_visibleCasts.AsReadOnly(),
             VisibleCastSelectedIndex = m_visibleCasts.IndexOf(m_activeChar),
         };
+    }
+
+    /// <summary>
+    /// 微調整スライダー値変更後のライブ再適用。
+    /// 水着で stocking override が掛かっているキャラに対し、SwimWearStockingPatch の
+    /// 食い込み解消を新パラメータで再構築する。非水着・override 無し・KneeSocks の場合は no-op。
+    /// </summary>
+    private void ReapplyStockingForTune()
+    {
+        if (m_activeChar >= CharID.NUM) return;
+        if (!StockingOverrideStore.TryGet(m_activeChar, out var stk)) return;
+        if (StockingOverrideStore.IsKneeSocksType(stk)) return;
+        var env = GBSystem.Instance?.GetActiveEnvScene();
+        if (env == null) return;
+        if (!IsSwimWear(env, m_activeChar)) return;
+
+        SwimWearStockingPatch.InvalidateForReapply(m_activeChar);
+        try
+        {
+            env.ApplyStockings(m_activeChar, 0); // SwimWearStockingPatch は override store を見るので type 引数は無視
+        }
+        catch (Exception ex)
+        {
+            PatchLogger.LogWarning($"[CostumePicker] tune 再適用失敗: {ex}");
+        }
     }
 
     /// <summary>
