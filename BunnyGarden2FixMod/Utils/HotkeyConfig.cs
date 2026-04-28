@@ -1,4 +1,5 @@
 using BepInEx.Configuration;
+using BunnyGarden2FixMod.Patches.Settings;
 using UnityEngine.InputSystem;
 
 #nullable enable
@@ -50,6 +51,11 @@ public class HotkeyConfig
 
     public bool IsHeld()
     {
+        // キーバインドキャプチャ中 / キャプチャ確定直後 (SuppressGameInput 期間) は押下判定を無効化。
+        // 確定したキーが同フレームでホットキーとして発火する誤動作を防ぐ。
+        if (SettingsController.IsAnyCapturing) return false;
+        if (Plugin.ShouldSuppressGameInput()) return false;
+
         if (KeyConfig != null && Keyboard.current?[KeyConfig.Value].isPressed == true)
             return true;
 
@@ -64,16 +70,26 @@ public class HotkeyConfig
 
     public bool IsTriggered()
     {
+        // キーバインドキャプチャ中 / キャプチャ確定直後 (SuppressGameInput 期間) は押下判定を無効化
+        if (SettingsController.IsAnyCapturing) return false;
+        if (Plugin.ShouldSuppressGameInput()) return false;
         return IsKeyboardTriggered() || IsControllerTriggered();
     }
 
     public bool IsKeyboardTriggered()
     {
+        // キーバインドキャプチャ中 / キャプチャ確定直後 (SuppressGameInput 期間) は押下判定を無効化
+        if (SettingsController.IsAnyCapturing) return false;
+        if (Plugin.ShouldSuppressGameInput()) return false;
         return KeyConfig != null && Keyboard.current?[KeyConfig.Value].wasPressedThisFrame == true;
     }
 
     public bool IsControllerTriggered()
     {
+        // キーバインドキャプチャ中 / キャプチャ確定直後 (SuppressGameInput 期間) は押下判定を無効化
+        if (SettingsController.IsAnyCapturing) return false;
+        if (Plugin.ShouldSuppressGameInput()) return false;
+
         if (ButtonConfig != null &&
             IsControllerComboTriggered(Configs.ControllerModifier.Value, ButtonConfig.Value))
         {
