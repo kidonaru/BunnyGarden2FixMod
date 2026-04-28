@@ -31,13 +31,6 @@ public class SettingsView : MonoBehaviour
     private int m_selectedRowIndex = 0;
     private readonly List<RowHandle> m_currentRows = new();
 
-    // KeyBinding キャプチャ状態。
-    // クリックで開始 → 次のキー押下で確定。Esc キャンセル / Backspace,Delete で None。
-    private bool m_isCapturingKey;
-    private int m_capturingRowIndex = -1;
-
-    public bool IsCapturingKey => m_isCapturingKey;
-
     // キャプチャ中ヒント表示用 Label（BuildPanel で生成、非表示で待機）
     private Label m_captureHintLabel;
 
@@ -182,11 +175,10 @@ public class SettingsView : MonoBehaviour
         // ただし現在キャプチャ中のボタン自身またはその祖先がクリックされた場合は解除しない。
         m_root.RegisterCallback<MouseDownEvent>(evt =>
         {
-            if (!m_isCapturingKey) return;
+            var ctrl = SettingsController.Instance;
+            if (ctrl == null || !ctrl.IsCapturingKey) return;
             // 現在キャプチャ中の KeyCapBtn を特定する
-            var activeBtn = (m_capturingRowIndex >= 0 && m_capturingRowIndex < m_currentRows.Count)
-                ? m_currentRows[m_capturingRowIndex].KeyCapBtn
-                : null;
+            var activeBtn = FindKeyCapBtn(ctrl.CapturingEntry);
             // クリック対象が activeBtn またはその子孫の場合は解除しない
             if (activeBtn != null && evt.target is VisualElement ve)
             {
@@ -197,7 +189,7 @@ public class SettingsView : MonoBehaviour
                     node = node.parent;
                 }
             }
-            CancelKeyCapture();
+            ctrl.CancelKeyCapture();
         }, TrickleDown.TrickleDown);
 
         // 自前 tooltip 用のフローティング Label を m_root に追加する。
@@ -341,7 +333,7 @@ public class SettingsView : MonoBehaviour
     public void SelectCategory(int index)
     {
         if (index < 0 || index >= m_categories.Count) return;
-        if (m_isCapturingKey) CancelKeyCapture(); // カテゴリ切替時はキャプチャ状態を解除
+        SettingsController.Instance?.CancelKeyCapture(); // カテゴリ切替時はキャプチャ状態を解除
         m_selectedCategoryIndex = index;
         m_selectedRowIndex = 0;
         ApplySidebarHighlight();
@@ -396,8 +388,8 @@ public class SettingsView : MonoBehaviour
     private void ResetCurrentCategory()
     {
         if (m_categories == null || m_categories.Count == 0) return;
-        // キャプチャ中に「初期値に戻す」が押されてもキャプチャ状態が残ると stale row index を指すため明示的にキャンセル。
-        if (m_isCapturingKey) CancelKeyCapture();
+        // キャプチャ中に「初期値に戻す」が押されてもキャプチャ状態が残ると stale entry を指すため明示的にキャンセル。
+        SettingsController.Instance?.CancelKeyCapture();
         var category = m_categories[m_selectedCategoryIndex];
         foreach (var entry in Configs.UIEntries.Where(e => e.Category == category))
         {
@@ -507,7 +499,7 @@ public class SettingsView : MonoBehaviour
             // ── KB 側ボタン（クリックでキャプチャ開始）幅 50px 固定 ──
             var kbBtn = new UITButton();
             var kbText = FormatKeyText(hotkey.KeyConfig?.Value);
-            kbBtn.Setup(kbText, () => StartKeyCapture(entry), m_font);
+            kbBtn.Setup(kbText, () => SettingsController.Instance?.StartKeyCapture(entry), m_font);
             kbBtn.SetVariant(UITButton.Variant.Subtle);
             kbBtn.SetWidth(50);
             kbBtn.style.flexGrow = 0;
@@ -595,7 +587,7 @@ public class SettingsView : MonoBehaviour
     {
         if (m_root == null) return;
         // キャプチャ中にパネルが閉じられた場合は状態をリセット（再表示時のフラグ残留を防ぐ）
-        if (m_isCapturingKey) CancelKeyCapture();
+        SettingsController.Instance?.CancelKeyCapture();
         // 開いている dropdown / PadDropdown ポップアップは panel.visualTree 直下にあるため、
         // パネル display を None にしても残ることがある。明示的に閉じる。
         foreach (var h in m_currentRows)
@@ -657,14 +649,14 @@ public class SettingsView : MonoBehaviour
         var h = m_currentRows[m_selectedRowIndex];
         if (h.Switch != null)             h.Switch.Toggle();
         else if (h.Dropdown != null)      h.Dropdown.Cycle(+1);
-        else if (h.KeyCapBtn != null)     StartKeyCapture(h.Entry); // Space/Enter で KB キャプチャ開始
+        else if (h.KeyCapBtn != null)     SettingsController.Instance?.StartKeyCapture(h.Entry); // Space/Enter で KB キャプチャ開始
         // KeyBinding 行の Slider は null のため HandleKeyArrowLeft/Right も自然に何もしない
     }
 
     public void HandleKeyTabNext()
     {
         if (m_categories == null || m_categories.Count == 0) return;
-        if (m_isCapturingKey) CancelKeyCapture(); // Tab でカテゴリ移動時はキャプチャを解除
+        SettingsController.Instance?.CancelKeyCapture(); // Tab でカテゴリ移動時はキャプチャを解除
         m_selectedCategoryIndex = (m_selectedCategoryIndex + 1) % m_categories.Count;
         m_selectedRowIndex = 0;
         ApplySidebarHighlight();
@@ -674,7 +666,7 @@ public class SettingsView : MonoBehaviour
     public void HandleKeyTabPrev()
     {
         if (m_categories == null || m_categories.Count == 0) return;
-        if (m_isCapturingKey) CancelKeyCapture(); // Shift+Tab でカテゴリ移動時はキャプチャを解除
+        SettingsController.Instance?.CancelKeyCapture(); // Shift+Tab でカテゴリ移動時はキャプチャを解除
         m_selectedCategoryIndex = (m_selectedCategoryIndex - 1 + m_categories.Count) % m_categories.Count;
         m_selectedRowIndex = 0;
         ApplySidebarHighlight();
@@ -699,7 +691,53 @@ public class SettingsView : MonoBehaviour
         h.Slider.SetValue(entry.Accessor.GetFloat());
     }
 
+    // ── Controller から呼ばれる UI 操作 API ──────────────────────────────────
+
+    /// <summary>キャプチャ開始時に Controller から呼ばれる UI 反映。</summary>
+    public void OnCaptureStarted(UIEntryMeta entry)
+    {
+        if (entry == null) return;
+        var btn = FindKeyCapBtn(entry);
+        if (btn != null) btn.SetText("...");
+        // キャプチャ開始時にヒントを表示する
+        if (m_captureHintLabel != null) m_captureHintLabel.style.display = DisplayStyle.Flex;
+    }
+
+    /// <summary>キャプチャ終了時に Controller から呼ばれる UI 反映 (Cancel / Confirm 共通)。</summary>
+    public void OnCaptureEnded(UIEntryMeta entry)
+    {
+        if (entry != null)
+        {
+            var btn = FindKeyCapBtn(entry);
+            if (btn != null)
+            {
+                var hotkey = entry.HotkeyProvider?.Invoke();
+                btn.SetText(FormatKeyText(hotkey?.KeyConfig?.Value));
+            }
+        }
+        // キャプチャ解除時にヒントを非表示にする
+        if (m_captureHintLabel != null) m_captureHintLabel.style.display = DisplayStyle.None;
+    }
+
+    /// <summary>HandleCapturedKey 確定後に Controller から呼ばれる: 行を再描画して新値を反映。</summary>
+    public void RequestRebuild()
+    {
+        // RenderContent はイベント発火中の VisualElement 破棄を避けるため次フレームに遅延する。
+        m_root?.schedule.Execute(RenderContent).StartingIn(0);
+    }
+
     // ── KeyBinding ヘルパ ──────────────────────────
+
+    /// <summary>指定エントリに対応する KeyCapBtn を m_currentRows から検索する。</summary>
+    private UITButton FindKeyCapBtn(UIEntryMeta entry)
+    {
+        if (entry == null) return null;
+        foreach (var h in m_currentRows)
+        {
+            if (ReferenceEquals(h.Entry, entry)) return h.KeyCapBtn;
+        }
+        return null;
+    }
 
     /// <summary>Key 値をボタン表示用テキストに変換する。None は "Unbound"。</summary>
     private static string FormatKeyText(UnityEngine.InputSystem.Key? key)
@@ -719,112 +757,6 @@ public class SettingsView : MonoBehaviour
             if (options[i] == name) return i;
         }
         return 0;
-    }
-
-    /// <summary>指定エントリの KB キャプチャモードを開始する。</summary>
-    private void StartKeyCapture(UIEntryMeta entry)
-    {
-        // 既にキャプチャ中なら他行への切り替えを禁止する（再入ガード）
-        if (m_isCapturingKey) return;
-
-        int idx = -1;
-        for (int i = 0; i < m_currentRows.Count; i++)
-        {
-            if (ReferenceEquals(m_currentRows[i].Entry, entry)) { idx = i; break; }
-        }
-        if (idx < 0) return;
-
-        m_isCapturingKey = true;
-        m_capturingRowIndex = idx;
-        var btn = m_currentRows[idx].KeyCapBtn;
-        if (btn != null) btn.SetText("...");
-        // キャプチャ開始時にヒントを表示する
-        if (m_captureHintLabel != null) m_captureHintLabel.style.display = DisplayStyle.Flex;
-    }
-
-    /// <summary>
-    /// キャプチャモードをキャンセルしボタン表示を元の値に戻す。
-    /// m_isCapturingKey == false のときは何もしない冪等な実装。
-    /// </summary>
-    public void CancelKeyCapture()
-    {
-        if (!m_isCapturingKey) return;
-        m_isCapturingKey = false;
-        int idx = m_capturingRowIndex;
-        m_capturingRowIndex = -1;
-        if (idx >= 0 && idx < m_currentRows.Count)
-        {
-            var h = m_currentRows[idx];
-            var hotkey = h.Entry.HotkeyProvider?.Invoke();
-            if (h.KeyCapBtn != null) h.KeyCapBtn.SetText(FormatKeyText(hotkey?.KeyConfig?.Value));
-        }
-        // キャプチャ解除時にヒントを非表示にする
-        if (m_captureHintLabel != null) m_captureHintLabel.style.display = DisplayStyle.None;
-    }
-
-    /// <summary>
-    /// SettingsController からキャプチャ中のキー押下を受け取って確定処理を行う。
-    /// Esc → キャンセル, Backspace/Delete → None, 他 → そのキーを確定。
-    /// 確定後は全 KeyBinding 行に対し衝突スワップ → 1 フレーム ゲーム入力抑止 → 再描画。
-    /// </summary>
-    public void HandleCapturedKey(UnityEngine.InputSystem.Key k)
-    {
-        if (!m_isCapturingKey) return;
-        int idx = m_capturingRowIndex;
-        if (idx < 0 || idx >= m_currentRows.Count)
-        {
-            m_isCapturingKey = false;
-            m_capturingRowIndex = -1;
-            return;
-        }
-
-        if (k == UnityEngine.InputSystem.Key.Escape)
-        {
-            CancelKeyCapture();
-            return;
-        }
-
-        var newKey = (k == UnityEngine.InputSystem.Key.Backspace || k == UnityEngine.InputSystem.Key.Delete)
-            ? UnityEngine.InputSystem.Key.None
-            : k;
-
-        var entry = m_currentRows[idx].Entry;
-        var hotkey = entry.HotkeyProvider?.Invoke();
-        if (hotkey?.KeyConfig == null)
-        {
-            CancelKeyCapture();
-            return;
-        }
-
-        // 値代入の前に Suppress を呼ぶ（代入で SettingChanged 発火が即時 hotkey 評価につながる経路を塞ぐ）
-        Plugin.SuppressGameInputTemporarily();
-
-        var oldKey = hotkey.KeyConfig.Value;
-        hotkey.KeyConfig.Value = newKey;
-
-        // 衝突スワップ: 全 KeyBinding 行を走査し、newKey と被るエントリの値を oldKey に書き換える
-        if (newKey != UnityEngine.InputSystem.Key.None)
-        {
-            foreach (var other in Configs.UIEntries)
-            {
-                if (other.Kind != UIKind.KeyBinding) continue;
-                if (ReferenceEquals(other, entry)) continue;
-                var otherHk = other.HotkeyProvider?.Invoke();
-                if (otherHk?.KeyConfig == null) continue;
-                if (otherHk.KeyConfig.Value == newKey)
-                {
-                    otherHk.KeyConfig.Value = oldKey;
-                    PatchLogger.LogInfo($"[SettingsView] KB 衝突: '{other.Label}' を {newKey}→{oldKey} にスワップ");
-                }
-            }
-        }
-
-        m_isCapturingKey = false;
-        m_capturingRowIndex = -1;
-        // キー確定時にヒントを非表示にする
-        if (m_captureHintLabel != null) m_captureHintLabel.style.display = DisplayStyle.None;
-        // RenderContent はイベント発火中の VisualElement 破棄を避けるため次フレームに遅延する。
-        m_root?.schedule.Execute(RenderContent).StartingIn(0);
     }
 
     /// <summary>Pad ドロップダウン変更時の処理。衝突時はスワップして次フレームに再描画。</summary>
