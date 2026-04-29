@@ -105,11 +105,17 @@ public class Plugin : BaseUnityPlugin
         PatchLogger.LogInfo($"フリーカメラを自動解除しました: {reason}");
     }
 
+    /// <summary>
+    /// 一定時間 (0.18 秒) ゲーム本体側の入力およびホットキー判定を抑止する。
+    /// コントローラーショートカット発火後の連続発火防止と、KeyBinding キャプチャ確定後の
+    /// 同一キー再評価防止に使用。
+    /// </summary>
     public static void SuppressGameInputTemporarily()
     {
         suppressGameInputUntilUnscaledTime = Time.unscaledTime + ControllerShortcutSuppressDuration;
     }
 
+    /// <summary>SuppressGameInputTemporarily 期間中なら true。</summary>
     internal static bool ShouldSuppressGameInput()
     {
         return Time.unscaledTime < suppressGameInputUntilUnscaledTime;
@@ -220,6 +226,12 @@ public class FreeCamControllerShortcutInputSuppressionPatch
     [HarmonyPrefix]
     private static bool SuppressTriggeredRepeat(ref bool __result)
     {
+        // キャプチャ中はゲーム側の全リピート入力を遮断する
+        if (Patches.Settings.SettingsController.IsAnyCapturing)
+        {
+            __result = false;
+            return false;
+        }
         if (!Patches.FreeCamera.FreeCameraManager.IsActive || !Plugin.ShouldSuppressGameInput())
             return true;
 
@@ -231,6 +243,12 @@ public class FreeCamControllerShortcutInputSuppressionPatch
     [HarmonyPrefix]
     private static bool SuppressStick(InputAction stick, ref Vector2 __result)
     {
+        // キャプチャ中はゲーム側のスティック入力を遮断する
+        if (Patches.Settings.SettingsController.IsAnyCapturing)
+        {
+            __result = Vector2.zero;
+            return false;
+        }
         if (!Patches.FreeCamera.FreeCameraManager.IsActive || !Plugin.ShouldSuppressGameInput())
             return true;
 
@@ -245,6 +263,12 @@ public class FreeCamControllerShortcutInputSuppressionPatch
     [HarmonyPrefix]
     private static bool SuppressCameraControl(ref Vector2 __result)
     {
+        // キャプチャ中はゲーム側のカメラ操作入力を遮断する
+        if (Patches.Settings.SettingsController.IsAnyCapturing)
+        {
+            __result = Vector2.zero;
+            return false;
+        }
         if (!Patches.FreeCamera.FreeCameraManager.IsActive || !Plugin.ShouldSuppressGameInput())
             return true;
 
@@ -254,6 +278,12 @@ public class FreeCamControllerShortcutInputSuppressionPatch
 
     private static bool TrySuppress(InputAction button, ref bool result)
     {
+        // キャプチャ中はゲーム側の全ボタン入力を遮断する
+        if (Patches.Settings.SettingsController.IsAnyCapturing)
+        {
+            result = false;
+            return false;
+        }
         if (!Patches.FreeCamera.FreeCameraManager.IsActive || !Plugin.ShouldSuppressGameInput())
             return true;
 
@@ -283,6 +313,8 @@ public class SuppressClickOverWardrobePatch
 {
     private static bool Prefix(ref bool __result)
     {
+        // キャプチャ中はマウスクリックもゲーム側に流れないよう遮断する
+        if (Patches.Settings.SettingsController.IsAnyCapturing) { __result = false; return false; }
         if (!Patches.CostumeChanger.UI.CostumePickerController.ShouldSuppressGameInput() &&
             !Patches.Settings.SettingsController.ShouldSuppressMouseInput()) return true;
         __result = false;
@@ -305,6 +337,8 @@ public class SuppressScrollOverWardrobePatch
 
     private static bool Prefix(ref float __result)
     {
+        // キャプチャ中はスクロール入力もゲーム側に流れないよう遮断する
+        if (Patches.Settings.SettingsController.IsAnyCapturing) { __result = 0f; return false; }
         if (!Patches.CostumeChanger.UI.CostumePickerController.ShouldSuppressGameInput() &&
             !Patches.Settings.SettingsController.ShouldSuppressMouseInput()) return true;
         __result = 0f;
@@ -322,6 +356,8 @@ public class SuppressKeyOverWardrobePatch
 {
     private static bool Prefix(UnityEngine.InputSystem.InputAction button, ref bool __result)
     {
+        // キャプチャ中はキー入力もゲーム側に流れないよう遮断する
+        if (Patches.Settings.SettingsController.IsAnyCapturing) { __result = false; return false; }
         if (!Patches.CostumeChanger.UI.CostumePickerController.ShouldSuppressGameInput(button?.name)) return true;
         __result = false;
         return false;
@@ -338,6 +374,8 @@ public class SuppressKeyRepeatOverWardrobePatch
 {
     private static bool Prefix(ref bool __result)
     {
+        // キャプチャ中はリピートキー入力もゲーム側に流れないよう遮断する
+        if (Patches.Settings.SettingsController.IsAnyCapturing) { __result = false; return false; }
         if (!Patches.CostumeChanger.UI.CostumePickerController.ShouldSuppressGameInput() &&
             !Patches.Settings.SettingsController.ShouldSuppressMouseInput()) return true;
         __result = false;
