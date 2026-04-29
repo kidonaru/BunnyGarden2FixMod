@@ -35,7 +35,6 @@ public static class TalkReactionPatch
             MOTION.SHAKER_HARD,
         ];
 
-
         private MOTION lastMotion = MOTION._DUMMY;
 
         public MOTION GetNextMotion()
@@ -93,10 +92,6 @@ public static class TalkReactionPatch
                 MOTION.IDLE => 2f,
                 _ => Random.Range(5f, 7f)
             };
-            PatchLogger.LogInfo(
-                $"[{nameof(TalkReactionPatch)}] " +
-                $"TalkReactionMotion: {nextMotion}, " +
-                $"ResetTime: {__instance.m_talkReactionMotionResetTime}");
         }
 
         return false;
