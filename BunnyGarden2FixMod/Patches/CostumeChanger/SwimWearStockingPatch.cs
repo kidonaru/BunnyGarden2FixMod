@@ -197,6 +197,10 @@ public static class SwimWearStockingPatch
             s_backups.Remove(key);
             PatchLogger.LogDebug($"[SwimWearStockingPatch] sharedMesh 復元: {handle.GetCharID()}");
         }
+
+        // SwimWear が skin_lower を手放したので SkinShrink に管理再開を通知する（以後の RefreshOne は registry
+        // native=vanilla に rewind し、ストッキング解除後も conform が復活する stale-conform resurrection を断つ）。
+        SkinShrinkCoordinator.SetSkinLowerExternallyManaged(chara, false);
     }
 
     private static bool ApplyStockingSync(CharacterHandle handle, int overrideType, SkinnedMeshRenderer donor, bool isKneeSocks)
@@ -350,8 +354,16 @@ public static class SwimWearStockingPatch
             if (shapeFalloffRadius > 0f) shapeAnchorVerts = CollectShrinkAnchorVerts(renderers);
         }
 
-        TransplantInto(swimLower, lowerDonor.sharedMesh, key, shrinkWeight, isKneeSocks, shapeAnchorVerts, shapeFalloffRadius, ref backup.LowerSmr, ref backup.LowerOriginalMesh);
-        TransplantInto(swimLowerFoot, lowerDonor.sharedMesh, key, shrinkWeight, isKneeSocks, shapeAnchorVerts, shapeFalloffRadius, ref backup.LowerFootSmr, ref backup.LowerFootOriginalMesh);
+        TransplantInto(swimLower, chara, lowerDonor.sharedMesh, key, shrinkWeight, isKneeSocks, shapeAnchorVerts, shapeFalloffRadius, ref backup.LowerSmr, ref backup.LowerOriginalMesh);
+        TransplantInto(swimLowerFoot, chara, lowerDonor.sharedMesh, key, shrinkWeight, isKneeSocks, shapeAnchorVerts, shapeFalloffRadius, ref backup.LowerFootSmr, ref backup.LowerFootOriginalMesh);
+
+        // skin_lower が実際に transplant された場合のみ、SwimWear が skin_lower を所有することを SkinShrink に
+        // 通知する。managed 中は SkinShrinkCoordinator.RefreshOne が skin_lower を一切触らない（rewind/push を
+        // skip）ため、SwimWear の transplant(conform) が唯一の writer として保持される。transplant 不発（degenerate
+        // donor 等）なら false で unmark し SkinShrink 管理に戻す（self-correcting）。
+        bool lowerTransplanted = swimLower != null && swimLower.sharedMesh != null
+            && Internal.NativeSmrRegistry.IsModGeneratedMesh(swimLower.sharedMesh);
+        SkinShrinkCoordinator.SetSkinLowerExternallyManaged(chara, lowerTransplanted);
     }
 
     private static readonly System.Collections.Generic.HashSet<string> s_shrinkTargetNames = new()
@@ -377,7 +389,7 @@ public static class SwimWearStockingPatch
         return list.ToArray();
     }
 
-    private static void TransplantInto(SkinnedMeshRenderer target, Mesh donorMesh, int charKey, float shrinkWeight, bool isKneeSocks,
+    private static void TransplantInto(SkinnedMeshRenderer target, GameObject chara, Mesh donorMesh, int charKey, float shrinkWeight, bool isKneeSocks,
         Vector3[] shapeAnchorVerts, float shapeFalloffRadius,
         ref SkinnedMeshRenderer backupSmr, ref Mesh backupOriginal)
     {
@@ -391,6 +403,12 @@ public static class SwimWearStockingPatch
         {
             target.sharedMesh = backupOriginal;
         }
+
+        // registry 規約: skin SMR.sharedMesh を MOD 由来 mesh に差し替える前に真 native(=vanilla) を確定する。
+        // backupOriginal 巻き戻し後（= 現 sharedMesh が vanilla swim skin）の時点で capture することで、後続の
+        // SkinShrinkCoordinator.RefreshOne の GetOrCapture が idempotent になり規約違反を解消する。
+        // lower / foot 共通経路。foot は SkinShrink 読者不在だが invariant 準拠で無害。
+        if (chara != null) Internal.NativeSmrRegistry.GetOrCapture(chara, target);
 
         // shape falloff 量子化キー (0.1mm 精度, max 0.01m → 100)
         int shapeFalloffQ = Mathf.RoundToInt(shapeFalloffRadius * 10_000f);
