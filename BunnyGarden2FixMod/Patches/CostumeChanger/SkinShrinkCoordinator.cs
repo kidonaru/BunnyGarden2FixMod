@@ -48,14 +48,21 @@ namespace BunnyGarden2FixMod.Patches.CostumeChanger;
 ///   - すべての Register/Unregister は character GameObject の component が live な状態で呼ぶ
 ///     (<see cref="ClearScene"/> 後は呼ばない)。
 ///
-/// skin_lower の素 (巻き戻し先) は Entry に保持せず <see cref="Internal.NativeSmrRegistry"/> の
-/// native を単一権威とする (<see cref="RefreshOne"/> の rewind 参照)。skin_lower は誰も swap しない
-/// ため「素 == native」で固定でき、registry 一本化で巻き戻し先が常に stable asset になる。
-/// 本 Coordinator は skin_lower.sharedMesh の唯一の writer であり、push (<see cref="ApplyContribution"/>)
-/// より前に必ず <see cref="RefreshOne"/> 冒頭で GetOrCapture するため、registry には初回ロード時の
-/// 真 native (= _resolved 等の MOD clone でない) のみが焼かれる (汚染は構造的に到達不能)。
-/// 将来 skin_lower を swap する経路を追加する場合は、この native==素 前提が崩れるため
-/// skin_upper 同様の Entry 保持 + Rebase 機構が必要になる。
+/// skin_lower の素 (巻き戻し先) は Entry に保持せず <see cref="Internal.NativeSmrRegistry"/> の native を
+/// 単一権威とする (<see cref="RefreshOne"/> の rewind 参照)。SkinShrink が管理する通常経路では skin_lower は
+/// 誰も swap しないため「素 == native」で固定でき、巻き戻し先が常に stable asset になる。push
+/// (<see cref="ApplyContribution"/>) より前に必ず <see cref="RefreshOne"/> 冒頭で GetOrCapture するため、
+/// registry には真 native (= _resolved 等の MOD clone でない) のみが焼かれる。
+///
+/// 例外 — SwimWear ストッキング: <see cref="SwimWearStockingPatch"/> はストッキング transplant で skin_lower を
+/// 別 writer として上書きする (mesh_skin_lower_transplanted[_resolved])。この skin_lower を swap する経路では
+/// 「素 == native」前提が崩れる。ただし SwimWear の出力は <see cref="MeshPenetrationResolver"/> の transient
+/// resolve clone で、suffix も config (StockingSkinShrink) 次第で _transplanted / _transplanted_resolved と変わる
+/// ため、skin_upper のような Entry 保持 + Rebase の rewind 基底にはできない。そこで基底を持たず ownership-defer
+/// する: SwimWear が <see cref="SetSkinLowerExternallyManaged"/> で managed を立て、その間 RefreshOne は
+/// skin_lower を一切触らない (GetOrCapture/rewind/push を skip) ＝ SwimWear の transplant(conform) を唯一の
+/// writer として保持する。SwimWear は transplant 前に真 vanilla を GetOrCapture で registry に確定するため、
+/// SkinShrink が万一 skin_lower に触れても idempotent vanilla で規約違反にならない。
 /// </summary>
 internal static class SkinShrinkCoordinator
 {
@@ -85,6 +92,14 @@ internal static class SkinShrinkCoordinator
     }
 
     private static readonly Dictionary<int, Entry> s_entries = new();
+
+    // SwimWear がストッキング transplant で skin_lower を所有中の character (instanceID)。
+    // 在籍中は RefreshOne が skin_lower を一切触らない (GetOrCapture/rewind/push を skip)。SwimWear の出力
+    // (_transplanted / _transplanted_resolved) は MeshPenetrationResolver の transient resolve clone で安全な
+    // rewind 基底にできないため、SkinShrink は基底を保持せず ownership で defer する (class doc 参照)。
+    // SwimWearStockingPatch が apply 時に SetSkinLowerExternallyManaged(true) / 解除時に (false)、
+    // scene unload で ClearScene が一掃する。
+    private static readonly HashSet<int> s_skinLowerExternallyManaged = new();
 
     // key: (prevSkinId=push 直前 skin mesh, donorClothId=cloth mesh, yQ/fQ/srQ=量子化 params,
     //       srcTag=0/1 Tops/Bottoms, kindTag=0/1 upper/lower push)
@@ -221,6 +236,12 @@ internal static class SkinShrinkCoordinator
         if (!s_entries.TryGetValue(charId, out var e)) return;
         var skinUpper = renderers.FirstOrDefault(r => r != null && r.name == "mesh_skin_upper");
         var skinLower = renderers.FirstOrDefault(r => r != null && r.name == "mesh_skin_lower");
+
+        // SwimWear がストッキング transplant で skin_lower を所有中は SkinShrink は一切触らない
+        // (GetOrCapture/rewind/push を skip)。skinLower を null 化すると以降の全 `skinLower != null` ガードが
+        // no-op 化し skin_upper には影響しない。SwimWear 出力は transient resolve clone で安全な rewind 基底に
+        // できないため基底を持たず defer する (class doc 参照)。
+        if (skinLower != null && s_skinLowerExternallyManaged.Contains(charId)) skinLower = null;
 
         // memory feedback_native_smr_registry_invariant: rewind / ApplyContribution で skin SMR の sharedMesh を
         // MOD 生成 push clone に書き換える前に Registry に真 native を確定。Tops/BottomsLoader 側の
@@ -411,6 +432,23 @@ internal static class SkinShrinkCoordinator
     }
 
     /// <summary>
+    /// SwimWear がストッキング transplant で skin_lower を所有しているかを登録/解除する。
+    /// managed 中は <see cref="RefreshOne"/> が skin_lower を一切触らない (GetOrCapture/rewind/push を skip)。
+    /// SwimWear の出力 (_transplanted / _transplanted_resolved) は <see cref="MeshPenetrationResolver"/> の
+    /// transient resolve clone で安全な rewind 基底にできないため、SkinShrink は skin_upper のような Entry 保持 +
+    /// Rebase を採らず、基底を持たない ownership-defer で退避する (class doc 参照)。
+    /// <see cref="SwimWearStockingPatch"/> が transplant 適用時に true / ClearStockingSync 時に false を渡す。
+    /// character は SwimWear / Tops 双方とも handle.Chara を使うため registry key と一致する。
+    /// </summary>
+    internal static void SetSkinLowerExternallyManaged(GameObject character, bool managed)
+    {
+        if (character == null) return;
+        int id = character.GetInstanceID();
+        if (managed) s_skinLowerExternallyManaged.Add(id);
+        else s_skinLowerExternallyManaged.Remove(id);
+    }
+
+    /// <summary>
     /// skin_upper の push 巻き戻し基準 (素) として安全に捕捉できる Mesh を返す。
     /// 現 sharedMesh が MOD 生成 clone (_resolved/_breastflat 等) を捕捉すると巻き戻し基準がドリフトし、
     /// サイクルごとに _resolved が累積して skin_upper がトゲ破綻する (additive base-SwimWear + override 時)。
@@ -430,6 +468,9 @@ internal static class SkinShrinkCoordinator
     public static void ClearScene()
     {
         s_entries.Clear();
+        // SwimWear 所有フラグも一掃 (SwimWearStockingPatch.OnSceneUnloaded が s_backups.Clear() する lifecycle と
+        // 一致＝再 apply で再 mark される)。instanceID は session 内で再利用されないため stale も harmless。
+        s_skinLowerExternallyManaged.Clear();
         // s_cache は scene 跨ぎで保持 (TopsLoader.OnSceneUnloaded と同方針 — 加算読込時の Unity null 化回避)。
         // GPU memory cleanup は InvalidateCache (param 変更経由) に集約。
     }
